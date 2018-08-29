@@ -1,11 +1,12 @@
-#include "DAGCerealizer.h"
+#include "DAGLoader.h"
 #include <cereal/archives/binary.hpp>
 #include <cereal/archives/json.hpp>
 #include <cereal/types/vector.hpp>
 #include <fstream>
 
-#include "../utils/Aabb.h" //FIXME: Proper search paths
 #include <glm/vec3.hpp>
+
+#include <utils/Aabb.h>
 
 namespace glm {
 template <class Archive>

@@ -3,7 +3,7 @@
 #include <iostream>
 #include <cstdint>
 #include <vector>
-#include "../utils/Aabb.h" //FIXME: Proper search paths
+#include <utils/Aabb.h>
 
 struct float4;
 

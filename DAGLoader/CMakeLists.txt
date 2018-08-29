@@ -6,8 +6,8 @@ find_package(cereal REQUIRED)
 find_package(GLM REQUIRED)
 
 add_library(DAGLoader STATIC
-			DAGCerealizer.h
-			DAGCerealizer.cpp
+			DAGLoader/DAGLoader.h
+			DAGLoader/DAGLoader.cpp
 )
 
 target_link_libraries(DAGLoader 
@@ -15,10 +15,18 @@ target_link_libraries(DAGLoader
 		cereal 
 		glm
 )
+
 target_link_libraries(DAGLoader 
 	PRIVATE 
 		utils 
 		DAG
+)
+
+target_include_directories( DAGLoader 
+	PUBLIC
+		$<BUILD_INTERFACE:${DAGLoader_BINARY_DIR}>
+		$<BUILD_INTERFACE:${DAGLoader_SOURCE_DIR}>
+		$<INSTALL_INTERFACE:include>
 )
 
 set_property(TARGET DAGLoader PROPERTY CXX_STANDARD_REQUIRED ON)

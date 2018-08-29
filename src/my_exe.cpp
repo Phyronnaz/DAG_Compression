@@ -8,8 +8,8 @@
 #include <SDL2/SDL.h>
 
 #include "DAG/DAG.h"
-#include "DAGConstructor/Dagifier.h"
-#include "DAGLoader/DAGCerealizer.h"
+#include "DAGConstructor/DAGConstructor.h"
+#include "DAGLoader/DAGLoader.h"
 #include "DAGTracer/DAGTracer.h"
 #include "morton.h"
 #include "utils/view.h"
@@ -252,7 +252,7 @@ int main(int argc, char *argv[]) {
                 colors[4 * i + 3] = sortme[i].color.w;
 		    }
 	    }
-        dagifier tmp;
+        DAGConstructor tmp;
         // The log2(GRID_RESOLUTION / 4) + 0 is because we use 4x4x4 leafs instead of 2x2x2. 
         // The final + 0 is a placeholder for when we need to merge dags.
 		dag = tmp.build_dag(morton, colors, static_cast<int>(morton.size()), static_cast<int>(log2(GRID_RESOLUTION / 4) + 0), square_aabb);

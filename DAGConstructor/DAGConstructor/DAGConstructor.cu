@@ -1,4 +1,4 @@
-#include "Dagifier.h"
+#include "DAGConstructor.h"
 // C-STD
 #include <stdint.h>
 #include <intrin.h>
@@ -23,7 +23,7 @@
 #include "../CudaHelpers.h" //FIXME: Proper search paths
 #include "../hash.h"        //FIXME: Proper search paths
 
-struct dagifier::impl {
+struct DAGConstructor::impl {
 	std::size_t m_num_colors;
 	int m_cached_num_colors;
 	int m_cached_frag_count;
@@ -171,7 +171,7 @@ __global__ void create_dag_nodes_kernel(uint64_t *d_parent_sort_key,
 	}
 }
 
-void dagifier::impl::build_parent_level(int lvl, int bottomLevel) {
+void DAGConstructor::impl::build_parent_level(int lvl, int bottomLevel) {
 	dim3 blockDim = dim3(256);
 	int a         = m_parent_svo_size / blockDim.x;
 	int b         = m_parent_svo_size % blockDim.x != 0 ? 1 : 0;
@@ -191,7 +191,7 @@ void dagifier::impl::build_parent_level(int lvl, int bottomLevel) {
 }
 
 
-void dagifier::impl::create_dag_nodes(int parent_level_start_offset, int child_level_start_offset) {
+void DAGConstructor::impl::create_dag_nodes(int parent_level_start_offset, int child_level_start_offset) {
 	dim3 blockDim = dim3(256);
 	int a         = m_parent_svo_size / blockDim.x;
 	int b         = m_parent_svo_size % blockDim.x != 0 ? 1 : 0;
@@ -213,7 +213,7 @@ void dagifier::impl::create_dag_nodes(int parent_level_start_offset, int child_l
 
 
 
-void dagifier::impl::map_resources(size_t child_svo_size) {
+void DAGConstructor::impl::map_resources(size_t child_svo_size) {
 	m_child_svo_size = child_svo_size;
 	size_t free, total;
 	cudaMemGetInfo(&free, &total);
@@ -236,7 +236,7 @@ void dagifier::impl::map_resources(size_t child_svo_size) {
 	cudaMemGetInfo(&free, &total);
 }
 
-void dagifier::impl::initDag(int *child_level_start_offset, int *parent_level_start_offset) {
+void DAGConstructor::impl::initDag(int *child_level_start_offset, int *parent_level_start_offset) {
 	constexpr std::size_t child_start_offset = 9;
     thrust::copy_n(compact_masks.cbegin(), m_child_svo_size, child_sort_key.begin());  // Used for later
 	thrust::sequence(unique_pos.begin(), unique_pos.begin() + m_child_svo_size);        // Index to masks
@@ -288,7 +288,7 @@ struct functor : public thrust::binary_function<InParam1, InParam2, OutParam> {
 }  // namespace FirstUnique
 
 
-void dagifier::impl::buildDAG(int bottomLevel, int *parent_level_start_offset, int *child_level_start_offset) {
+void DAGConstructor::impl::buildDAG(int bottomLevel, int *parent_level_start_offset, int *child_level_start_offset) {
 	initDag(child_level_start_offset, parent_level_start_offset);
 	int prev_child_svo_size = m_child_svo_size;
 
@@ -354,7 +354,7 @@ void dagifier::impl::buildDAG(int bottomLevel, int *parent_level_start_offset, i
 	}
 }
 
-uint32_t dagifier::impl::count_child_nodes(int lvl, int bottomlevel, uint32_t node_idx, std::vector<uint32_t> *dag) {
+uint32_t DAGConstructor::impl::count_child_nodes(int lvl, int bottomlevel, uint32_t node_idx, std::vector<uint32_t> *dag) {
 	if (lvl == bottomlevel) {
 		auto a = __popcnt((*dag)[node_idx]);
 		auto b = __popcnt((*dag)[node_idx + 1]);
@@ -379,7 +379,7 @@ uint32_t dagifier::impl::count_child_nodes(int lvl, int bottomlevel, uint32_t no
 }
 
 
-void dagifier::impl::printStatisticsPartial(int lvl, int bottomLevel, int unique_parent_nodes, int final_level_size,
+void DAGConstructor::impl::printStatisticsPartial(int lvl, int bottomLevel, int unique_parent_nodes, int final_level_size,
 									  int *total_dag_size, int *total_svo_size) {
 	///////////////////////////////////////////////////////////////////
 	// Statistics (assuming 4x4x4 leaf nodes)
@@ -401,7 +401,7 @@ void dagifier::impl::printStatisticsPartial(int lvl, int bottomLevel, int unique
 }
 
 
-void dagifier::impl::printStatisticsComplete(int total_dag_size, int total_svo_size) {
+void DAGConstructor::impl::printStatisticsComplete(int total_dag_size, int total_svo_size) {
 	int percent = int(100.0f * float(total_dag_size) / float(total_svo_size));
 	std::cout << "Total Size (bytes, assuming 4x4x4 leafs): SVO = " << total_svo_size << ", DAG = " << total_dag_size
 			  << " [" << percent << "%]\n";
@@ -433,7 +433,7 @@ struct average_color : public thrust::unary_function<float4, float4> { //FIXME: 
 };
 
 
-std::size_t dagifier::impl::sort_and_merge_fragments(std::size_t count) {
+std::size_t DAGConstructor::impl::sort_and_merge_fragments(std::size_t count) {
 	namespace tc = thrust::cuda;
     thrust::device_vector<uint32_t> th_sorted_index(count, 0);
 	thrust::device_vector<uint32_t> th_unique(count,0);
@@ -497,7 +497,7 @@ std::size_t dagifier::impl::sort_and_merge_fragments(std::size_t count) {
 	return m_child_svo_size;
 }
 
-dag::DAG dagifier::impl::build_dag(int count, int depth, const chag::Aabb &aabb) {
+dag::DAG DAGConstructor::impl::build_dag(int count, int depth, const chag::Aabb &aabb) {
 	dag::DAG result;
 	result.m_levels = depth;
 	result.m_aabb   = aabb;
@@ -544,7 +544,7 @@ dag::DAG dagifier::impl::build_dag(int count, int depth, const chag::Aabb &aabb)
 
 
 // Base wrapper.
-dag::DAG dagifier::build_dag(const std::vector<uint32_t> &morton_paths,
+dag::DAG DAGConstructor::build_dag(const std::vector<uint32_t> &morton_paths,
                              const std::vector<float> &colors,
                              int count, int depth, const chag::Aabb &aabb){
 	p_impl_->path.resize(count);
@@ -554,12 +554,12 @@ dag::DAG dagifier::build_dag(const std::vector<uint32_t> &morton_paths,
 	return p_impl_->build_dag(count, depth, aabb);
 }
 
-dag::DAG dagifier::build_dag(uint32_t *d_pos, float4 *d_color, int count, int depth, const chag::Aabb &aabb) {
+dag::DAG DAGConstructor::build_dag(uint32_t *d_pos, float4 *d_color, int count, int depth, const chag::Aabb &aabb) {
 	p_impl_->path.resize(count);
 	thrust::copy_n(thrust::device_ptr<uint32_t>{d_pos}, count, p_impl_->path.begin());
 	p_impl_->color.resize(count);
 	thrust::copy_n(thrust::device_ptr<float4>{d_color}, count, p_impl_->color.begin());
     return p_impl_->build_dag(count, depth, aabb);
 }
-dagifier::dagifier() : p_impl_{std::make_unique<impl>()} {}
-dagifier::~dagifier() {}
+DAGConstructor::DAGConstructor() : p_impl_{std::make_unique<impl>()} {}
+DAGConstructor::~DAGConstructor() {}

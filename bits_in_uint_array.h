@@ -19,8 +19,8 @@ PREAMBLE inline void clear_bits(uint32_t &val, const int from_bit, const int bit
 PREAMBLE inline uint64_t insert_bits(uint32_t val, int bits, uint32_t * array, uint64_t bitptr) {
 	if (bits == 0) return bitptr;
 	val &= (0xFFFFFFFFu >> (32 - bits));
-	uint32_t ptr_word = bitptr / 32ull;
-	uint32_t ptr_bit = bitptr % 32ull;
+	uint32_t ptr_word = static_cast<uint32_t>(bitptr / 32ull);
+	uint32_t ptr_bit  = static_cast<uint32_t>(bitptr % 32ull);
 	int bits_left = 32 - ptr_bit;
 	if (bits_left >= bits) {
 		clear_bits(array[ptr_word], ptr_bit, bits);

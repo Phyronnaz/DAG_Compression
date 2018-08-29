@@ -1,7 +1,8 @@
 #include <string>
 #include <vector>
 #include <glm/vec3.hpp>
-#include "../DAG/DAG.h" //FIXME: Proper search paths
+#include <DAG/DAG.h>
+
 namespace dag {
 namespace cerealization {
 using glm::vec3;

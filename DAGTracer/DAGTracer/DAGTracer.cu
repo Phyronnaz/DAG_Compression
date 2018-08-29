@@ -6,7 +6,7 @@
 #include <algorithm>
 #include "../CudaHelpers.h"        //FIXME: Proper search paths
 #include "../bits_in_uint_array.h" //FIXME: Proper search paths
-#include "../utils/view.h"         //FIXME: Proper search paths
+#include <utils/view.h>
 
 ///////////////////////////////////////////////////////////////////////////
 // Only need this right now. Dag should be on GPU when built. 

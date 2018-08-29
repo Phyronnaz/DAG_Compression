@@ -1,7 +1,7 @@
 #pragma once
 #include <stdint.h>
 #include "../CudaHelpers.h" //FIXME: Proper search paths
-#include "../DAG/DAG.h"     //FIXME: Proper search paths
+#include <DAG/DAG.h>
 //#include "elmar.h"
 //#include "ours.h"
 //#include "ours_varbit.h"
