@@ -181,6 +181,7 @@ struct AppState {
 };
 
 int main(int argc, char *argv[]) {
+
 	init();
 
 	DAGTracer dag_tracer;
@@ -188,11 +189,11 @@ int main(int argc, char *argv[]) {
 	bool load_entire_dag{false};
 	dag::DAG dag;
 	if (load_entire_dag) {
-		dag          = dag::cerealization::bin::load("../cache/dag.bin");
-		dag.m_colors = dag::cerealization::bin::load_vec<uint32_t>("../cache/colors.raw.bin");
+		dag          = dag::cerealization::bin::load("../../cache/dag.bin");
+		dag.m_colors = dag::cerealization::bin::load_vec<uint32_t>("../../cache/colors.raw.bin");
 	} else {
-		auto points = dag::cerealization::bin::load_vec<glm::vec3>("../cache/positions");
-		auto colors = dag::cerealization::bin::load_vec<float>("../cache/colors");
+		auto points = dag::cerealization::bin::load_vec<glm::vec3>("../../cache/positions");
+		auto colors = dag::cerealization::bin::load_vec<float>("../../cache/colors");
 
 		auto make_square_aabb = [](chag::Aabb aabb) {
 			const glm::vec3 hsz    = aabb.getHalfSize();
