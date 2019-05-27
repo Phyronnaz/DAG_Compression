@@ -5,7 +5,7 @@
 #include <string>
 
 #include <GL/glew.h>
-#include <SDL2/SDL.h>
+#include <SDL.h>
 
 #include "DAG/DAG.h"
 #include "DAGConstructor/DAGConstructor.h"

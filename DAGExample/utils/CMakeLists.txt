@@ -23,7 +23,6 @@ target_link_libraries(utils
 	PRIVATE
 		OpenGL::GL 
 		GLEW::GLEW 
-		glm
 )
 
 target_include_directories( utils 

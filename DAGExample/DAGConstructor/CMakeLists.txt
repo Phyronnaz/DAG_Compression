@@ -2,9 +2,6 @@ cmake_minimum_required ( VERSION 3.1 )
 
 project(DAGConstructor LANGUAGES CXX CUDA)
 
-find_package(utils REQUIRED)
-find_package(DAG REQUIRED)
-
 find_package(OpenGL REQUIRED) #FIXME: Remove. Need dependencies because of CudaHelpers....
 find_package(GLEW REQUIRED)	#FIXME: Remove. Need dependencies because of CudaHelpers....
 find_package(CUDA REQUIRED)

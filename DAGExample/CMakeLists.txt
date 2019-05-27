@@ -3,15 +3,8 @@ project(DAGExample)
 
 set(CMAKE_INCLUDE_CURRENT_DIR ON)
 
-find_package(utils REQUIRED)
-find_package(DAG REQUIRED)
-find_package(DAGConstructor REQUIRED)
-find_package(DAGTracer REQUIRED)
-find_package(DAGLoader REQUIRED)
-
 find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
-find_package(GLM REQUIRED)
 find_package(OpenGL REQUIRED)
 
 add_executable(my_exe src/my_exe.cpp)

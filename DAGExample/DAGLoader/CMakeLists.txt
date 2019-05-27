@@ -2,9 +2,6 @@ cmake_minimum_required ( VERSION 3.1 )
 
 project(DAGLoader)
 
-find_package(cereal REQUIRED)
-find_package(GLM REQUIRED)
-
 add_library(DAGLoader STATIC
 			DAGLoader/DAGLoader.h
 			DAGLoader/DAGLoader.cpp
