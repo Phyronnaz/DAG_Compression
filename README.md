@@ -1,12 +1,9 @@
 # DAG-example
 WIP!
 
-Currently it only supports building DAGs up to a resolution of 1024.
-
-No color compression included yet either. Only raw colors.
+No color compression included yet. Only raw colors.
 
 TODO:
-* Add support for larger DAGs by merging DAGs.
 * Add color compression.
 * Make code make more sense.
 
@@ -14,5 +11,6 @@ Dependencies:
 * CUDA
 * OpenGL
 * GLEW
-* glm (https://github.com/g-truc/glm)
-* Cereal (https://github.com/USCiLab/cereal) (Optional. For DAGLoader. Storing data to disk.)
+* glm (bundled) (https://github.com/g-truc/glm)
+* Cereal (bundled) (Optional. For DAGLoader. Storing data to disk.) (https://github.com/USCiLab/cereal) 
+* stb (bundled) (Optional. For glTFLoader. Reading images.)
