@@ -104,24 +104,6 @@ Voxelizer::Voxelizer(int grid_size) : m_grid_size(grid_size) {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, m_tex_dim * sizeof(uint32_t), NULL, GL_STATIC_DRAW);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
-		// Data buffer (color)
-		glGenBuffers(1, &m_color_ssbo);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_color_ssbo);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, m_tex_dim * sizeof(uint32_t), NULL, GL_STATIC_DRAW);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-		// Data buffer (occlusion roughness metallic)
-		glGenBuffers(1, &m_occlusion_roughness_metallic_ssbo);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_occlusion_roughness_metallic_ssbo);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, m_tex_dim * sizeof(uint32_t), NULL, GL_STATIC_DRAW);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
-		// Data buffer (normal)
-		glGenBuffers(1, &m_normal_ssbo);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_normal_ssbo);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, m_tex_dim * sizeof(uint32_t), NULL, GL_STATIC_DRAW);
-		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
 		// Data buffer (base color)
 		glGenBuffers(1, &m_base_color_ssbo);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_base_color_ssbo);
@@ -140,9 +122,6 @@ Voxelizer::Voxelizer(int grid_size) : m_grid_size(grid_size) {
 Voxelizer::~Voxelizer() {
 	glDeleteBuffers(1, &m_frag_ctr_buffer);
 	glDeleteBuffers(1, &m_position_ssbo);
-	glDeleteBuffers(1, &m_color_ssbo);
-	glDeleteBuffers(1, &m_occlusion_roughness_metallic_ssbo);
-	glDeleteBuffers(1, &m_normal_ssbo);
 	glDeleteBuffers(1, &m_base_color_ssbo);
 	glDeleteBuffers(1, &m_dummy_fbo);
 }

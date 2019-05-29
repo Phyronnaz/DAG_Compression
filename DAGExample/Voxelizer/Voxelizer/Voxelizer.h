@@ -19,13 +19,10 @@ class Voxelizer {
 	int m_grid_size;
 	GLuint voxelize_shader{0};
 
-	GLuint m_position_ssbo; // public for debug
  public:
+	GLuint m_position_ssbo;
 	GLuint m_mask_ssbo;
-	GLuint m_color_ssbo;
-	GLuint m_occlusion_roughness_metallic_ssbo;
 	GLuint m_base_color_ssbo;
-	GLuint m_normal_ssbo;
 	GLuint m_frag_count;
 	GLuint m_num_colors;
 	chag::Aabb m_aabb;
