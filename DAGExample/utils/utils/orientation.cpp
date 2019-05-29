@@ -38,7 +38,7 @@ void orientation::set_as_modelview() {
 mat4 orientation::get_MV() const {
 	mat4 invrot = mat4(transpose(R));
 	return glm::scale(mat4(1.0f), vec3(1.0f / scale.x, 1.0f / scale.y, 1.0f / scale.z)) * invrot *
-	       glm::translate(mat4(1.0f), -pos);
+				 glm::translate(mat4(1.0f), -pos);
 }
 
 mat4 orientation::get_MV_inv() const {

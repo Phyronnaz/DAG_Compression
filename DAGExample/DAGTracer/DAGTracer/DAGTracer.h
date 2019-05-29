@@ -2,9 +2,6 @@
 #include <stdint.h>
 #include "../CudaHelpers.h" //FIXME: Proper search paths
 #include <DAG/DAG.h>
-//#include "elmar.h"
-//#include "ours.h"
-//#include "ours_varbit.h"
 
 #define MAX_LEVELS 17
 #define IN_ORDER_TRAVERSAL 1
@@ -13,10 +10,10 @@
 ///////////////////////////////////////////////////////////////////////////
 // Only need this right now. Dag should be on GPU when built. 
 ///////////////////////////////////////////////////////////////////////////
-void temp_copy_dag_to_device(dag::DAG &dag);
+void upload_to_gpu(dag::DAG &dag);
 
 namespace chag{
-    class view;
+		class view;
 }
 class DAGTracer
 {
@@ -45,7 +42,7 @@ public:
 	// Primary raytracing of DAG
 	///////////////////////////////////////////////////////////////////////////
 	void resolve_paths(const dag::DAG &dag, const chag::view & camera, int color_lookup_level);
-	void resolve_colors(const dag::DAG &dag, /*elmar::ElmarData & elmar_data, ours::OursData & ours_data, ours_varbit::OursData*,*/ bool all_colors, int color_lookup_level);
+	void resolve_colors(const dag::DAG &dag, int color_lookup_level);
 };
 
 

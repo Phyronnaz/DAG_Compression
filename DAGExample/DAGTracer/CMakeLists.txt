@@ -5,7 +5,7 @@ project(DAGTracer LANGUAGES CXX CUDA)
 find_package( OpenGL REQUIRED )
 find_package( GLEW REQUIRED )
 find_package( CUDA REQUIRED )
-list(APPEND CMAKE_CUDA_FLAGS " -gencode=arch=compute_50,code=sm_50")
+list( APPEND CMAKE_CUDA_FLAGS ${PROJECT_CUDA_FLAGS})
 
 
 add_library(DAGTracer STATIC

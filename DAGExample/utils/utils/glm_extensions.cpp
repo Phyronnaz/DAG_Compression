@@ -7,18 +7,18 @@ namespace glm
 	////////////////////////////////////////////////////////////
 	// Extended functions
 	////////////////////////////////////////////////////////////
-    const mat4 make_matrix_from_zAxis(const vec3& pos, const vec3& zAxis, const vec3& yAxis) {
-	    vec3 z = normalize(zAxis);
-	    vec3 x = normalize(cross(yAxis, z));
-	    vec3 y = cross(z, x);
-	    mat4 m = {
+		const mat4 make_matrix_from_zAxis(const vec3& pos, const vec3& zAxis, const vec3& yAxis) {
+			vec3 z = normalize(zAxis);
+			vec3 x = normalize(cross(yAxis, z));
+			vec3 y = cross(z, x);
+			mat4 m = {
 			{x.x,   x.y,   x.z,   0.0f}, 
 			{y.x,   y.y,   y.z,   0.0f}, 
 			{z.x,   z.y,   z.z,   0.0f}, 
 			{pos.x, pos.y, pos.z, 1.0f}
 		};
-	    return m;
-    }
+			return m;
+		}
 
 	const mat4 make_frustum(float left, float right, float bottom,
 		float top, float znear, float zfar)

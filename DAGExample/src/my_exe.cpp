@@ -3,16 +3,18 @@
 #include <iostream>
 #include <numeric>
 #include <string>
+#include <stack>
 
 #include <GL/glew.h>
 #include <SDL.h>
+#include <glm/gtc/type_ptr.hpp>
 
 #include "DAG/DAG.h"
-#include "DAGConstructor/DAGConstructor.h"
-#include "DAGLoader/DAGLoader.h"
 #include "DAGTracer/DAGTracer.h"
-#include "morton.h"
 #include "utils/view.h"
+
+#include "glTFLoader/glTFLoader.h"
+#include "voxelize_and_merge.h"
 
 using glm::ivec2;
 using glm::vec2;
@@ -24,8 +26,6 @@ SDL_GLContext mainContext;
 ivec2 screen_dim{1024, 1024};
 GLuint copy_shader{0};
 GLint renderbuffer_uniform{-1};
-constexpr int GRID_RESOLUTION = 512;
-constexpr float GRID_RESOLUTION_FLOAT = static_cast<float>(GRID_RESOLUTION);
 
 GLuint compile_shader(GLenum shader_type, const std::string &src) {
 	GLuint shader_id     = glCreateShader(shader_type);
@@ -55,15 +55,21 @@ GLuint link_shaders(GLuint vs, GLuint fs) {
 	return program_id;
 }
 
-void init() {
-	mainWindow = SDL_CreateWindow("DAG", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, screen_dim.x, screen_dim.y,
-	                              SDL_WINDOW_OPENGL);
+void init() {		
+	mainWindow = SDL_CreateWindow(
+		"DAG",
+		SDL_WINDOWPOS_CENTERED,
+		SDL_WINDOWPOS_CENTERED,
+		screen_dim.x,
+		screen_dim.y,
+		SDL_WINDOW_OPENGL
+	);
 
 	mainContext = SDL_GL_CreateContext(mainWindow);
 
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 4);
+	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 5);
 	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 	SDL_GL_SetSwapInterval(1);
 
@@ -77,24 +83,24 @@ void init() {
 	glewInit();
 
 	std::string copy_vertex_shader =
-	    "#version 400 compatibility                                           \n"
-	    "out vec2 texcoord;                                                   \n"
-	    "void main() {                                                        \n"
-	    "   if(gl_VertexID == 0){ texcoord = vec2(0.0, 2.0); }                \n"
-	    "   if(gl_VertexID == 1){ texcoord = vec2(0.0, 0.0); }                \n"
-	    "   if(gl_VertexID == 2){ texcoord = vec2(2.0, 0.0); }                \n"
-	    "   if(gl_VertexID == 0){ gl_Position = vec4(-1.0,  3.0, 0.0, 1.0); } \n"
-	    "   if(gl_VertexID == 1){ gl_Position = vec4(-1.0, -1.0, 0.0, 1.0); } \n"
-	    "   if(gl_VertexID == 2){ gl_Position = vec4( 3.0, -1.0, 0.0, 1.0); } \n"
-	    "}                                                                    \n";
+			"#version 400 compatibility                                           \n"
+			"out vec2 texcoord;                                                   \n"
+			"void main() {                                                        \n"
+			"   if(gl_VertexID == 0){ texcoord = vec2(0.0, 2.0); }                \n"
+			"   if(gl_VertexID == 1){ texcoord = vec2(0.0, 0.0); }                \n"
+			"   if(gl_VertexID == 2){ texcoord = vec2(2.0, 0.0); }                \n"
+			"   if(gl_VertexID == 0){ gl_Position = vec4(-1.0,  3.0, 0.0, 1.0); } \n"
+			"   if(gl_VertexID == 1){ gl_Position = vec4(-1.0, -1.0, 0.0, 1.0); } \n"
+			"   if(gl_VertexID == 2){ gl_Position = vec4( 3.0, -1.0, 0.0, 1.0); } \n"
+			"}                                                                    \n";
 
 	std::string copy_fragment_shader =
-	    "#version 400 compatibility                                  \n"
-	    "in vec2 texcoord;                                           \n"
-	    "uniform sampler2D renderbuffer;                             \n"
-	    "void main() {                                               \n"
-	    "    gl_FragColor.xyz = texture(renderbuffer, texcoord).xyz; \n"
-	    "}                                                           \n";
+			"#version 400 compatibility                                  \n"
+			"in vec2 texcoord;                                           \n"
+			"uniform sampler2D renderbuffer;                             \n"
+			"void main() {                                               \n"
+			"    gl_FragColor.xyz = texture(renderbuffer, texcoord).xyz; \n"
+			"}                                                           \n";
 
 	GLuint vs            = compile_shader(GL_VERTEX_SHADER, copy_vertex_shader);
 	GLuint fs            = compile_shader(GL_FRAGMENT_SHADER, copy_fragment_shader);
@@ -144,7 +150,7 @@ struct AppState {
 			}
 		}
 
-		const float move_scale_factor{1.0f * dt};
+		const float move_scale_factor{1000.0f * dt};
 		const Uint8 *key_state = SDL_GetKeyboardState(NULL);
 		if (key_state[SDL_SCANCODE_ESCAPE]) { loop = false; }
 		if (key_state[SDL_SCANCODE_W]) { camera.pos -= move_scale_factor * camera.R[2]; }
@@ -181,101 +187,37 @@ struct AppState {
 };
 
 int main(int argc, char *argv[]) {
-
 	init();
 
+	constexpr int dag_resolution{4096*2};
+	auto dag = DAG_from_scene(dag_resolution, R"(..\..\assets\Sponza\glTF\)", "Sponza.gltf");
+	//dag->calculateColorForAllNodes();
 	DAGTracer dag_tracer;
 	dag_tracer.resize(screen_dim.x, screen_dim.y);
-	bool load_entire_dag{false};
-	dag::DAG dag;
-	if (load_entire_dag) {
-		dag          = dag::cerealization::bin::load("../../cache/dag.bin");
-		dag.m_colors = dag::cerealization::bin::load_vec<uint32_t>("../../cache/colors.raw.bin");
-	} else {
-		auto points = dag::cerealization::bin::load_vec<glm::vec3>("../../cache/positions");
-		auto colors = dag::cerealization::bin::load_vec<float>("../../cache/colors");
 
-		auto make_square_aabb = [](chag::Aabb aabb) {
-			const glm::vec3 hsz    = aabb.getHalfSize();
-			const glm::vec3 centre = aabb.getCentre();
-			const glm::vec3 c{glm::max(hsz.x, glm::max(hsz.y, hsz.z))};
-			aabb.min = centre - c;
-			aabb.max = centre + c;
-			return aabb;
-		};
+	if(dag)
+	{
+		upload_to_gpu(*dag);
+		AppState app;
+		app.camera.lookAt(vec3{0.0f, 1.0f, 0.0f}, vec3{0.0f, 0.0f, 0.0f});
+		while (app.loop) {
+			app.frame_timer.start();
+			app.handle_events();
 
-		chag::Aabb aabb = std::accumulate(
-		    begin(points), end(points),
-		    chag::make_aabb(vec3{std::numeric_limits<float>::max()}, vec3{std::numeric_limits<float>::lowest()}),
-		    [](const chag::Aabb &lhs, const vec3 &rhs) {
-			    chag::Aabb result;
-			    result.min.x = std::min(lhs.min.x, rhs.x);
-			    result.min.y = std::min(lhs.min.y, rhs.y);
-			    result.min.z = std::min(lhs.min.z, rhs.z);
+			const int color_lookup_lvl = dag->nofGeometryLevels();
+			dag_tracer.resolve_paths(*dag, app.camera, color_lookup_lvl);
+			dag_tracer.resolve_colors(*dag, color_lookup_lvl);
 
-			    result.max.x = std::max(lhs.max.x, rhs.x);
-			    result.max.y = std::max(lhs.max.y, rhs.y);
-			    result.max.z = std::max(lhs.max.z, rhs.z);
-			    return result;
-		    });
+			glUseProgram(copy_shader);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, dag_tracer.m_color_buffer.m_gl_idx);
+			glUniform1i(renderbuffer_uniform, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
 
-		chag::Aabb square_aabb = make_square_aabb(aabb);
-
-		std::vector<uint32_t> morton(points.size());
-		std::transform(begin(points), end(points), begin(morton), [square_aabb](const vec3 &pos) {
-            // First make sure the positions are in the range [0, GRID_RESOLUTION-1].
-			const vec3 corrected_pos =
-			    clamp(GRID_RESOLUTION_FLOAT * ((pos - square_aabb.min) / (square_aabb.max - square_aabb.min)), 
-                      vec3(0.0f), 
-                      vec3(GRID_RESOLUTION_FLOAT - 1.0f));
-			return morton_encode_32(static_cast<uint32_t>(corrected_pos.x),
-                                    static_cast<uint32_t>(corrected_pos.y),
-			                        static_cast<uint32_t>(corrected_pos.z));
-		});
-
-        // Need to make sure colors and morton key and colors are sorted according to morton.
-		{
-		    struct sort_elem {
-                uint32_t morton;
-                vec4 color;
-            };
-            std::vector<sort_elem> sortme(morton.size());
-            for(size_t i{0}; i<sortme.size(); ++i){
-                sortme[i].morton = morton[i];
-			    sortme[i].color  = vec4{ colors[4 * i + 0], colors[4 * i + 1], colors[4 * i + 2], colors[4 * i + 3] };
-            }
-		    std::sort(begin(sortme), end(sortme), [](const sort_elem &lhs, const sort_elem &rhs){ return lhs.morton < rhs.morton; });
-		    for (size_t i{0}; i < sortme.size(); ++i) {
-			    morton[i] = sortme[i].morton;
-                colors[4 * i + 0] = sortme[i].color.x;
-                colors[4 * i + 1] = sortme[i].color.y;
-                colors[4 * i + 2] = sortme[i].color.z;
-                colors[4 * i + 3] = sortme[i].color.w;
-		    }
-	    }
-        DAGConstructor tmp;
-        // The log2(GRID_RESOLUTION / 4) + 0 is because we use 4x4x4 leafs instead of 2x2x2. 
-        // The final + 0 is a placeholder for when we need to merge dags.
-		dag = tmp.build_dag(morton, colors, static_cast<int>(morton.size()), static_cast<int>(log2(GRID_RESOLUTION / 4) + 0), square_aabb);
-	}
-    
-	temp_copy_dag_to_device(dag); // FIXME: Refactor this to make more sense.
-	AppState app;
-	app.camera.lookAt(vec3{0.0f, 1.0f, 0.0f}, vec3{0.0f, 0.0f, 0.0f});
-	while (app.loop) {
-		app.frame_timer.start();
-		app.handle_events();
-		dag_tracer.resolve_paths(dag, app.camera, dag.nofGeometryLevels());
-		dag_tracer.resolve_colors(dag, false, dag.nofGeometryLevels());
-
-		glUseProgram(copy_shader);
-		glActiveTexture(GL_TEXTURE0);
-		glBindTexture(GL_TEXTURE_2D, dag_tracer.m_color_buffer.m_gl_idx);
-		glUniform1i(renderbuffer_uniform, 0);
-		glActiveTexture(GL_TEXTURE0);
-		glDrawArrays(GL_TRIANGLES, 0, 3);
-		SDL_GL_SwapWindow(mainWindow);
-		app.frame_timer.end();
+			SDL_GL_SwapWindow(mainWindow);
+			app.frame_timer.end();
+		}
 	}
 
 	SDL_GL_DeleteContext(mainContext);
@@ -283,3 +225,93 @@ int main(int argc, char *argv[]) {
 	SDL_Quit();
 	return 0;
 }
+
+//// Load from file
+//#include "DAGLoader/DAGLoader.h"
+//#include "DAGConstructor/DAGConstructor.h"
+//#include "morton.h"
+//...
+//constexpr int GRID_RESOLUTION = 512;
+//constexpr float GRID_RESOLUTION_FLOAT = static_cast<float>(GRID_RESOLUTION);
+//...
+//bool load_entire_dag{false};
+//dag::DAG dag;
+//if (load_entire_dag) 
+//{
+//	dag          = dag::cerealization::bin::load("../../cache/dag.bin");
+//	dag.m_colors = dag::cerealization::bin::load_vec<uint32_t>("../../cache/colors.raw.bin");
+//}
+//else
+//{
+//	auto points = dag::cerealization::bin::load_vec<glm::vec3>("../../cache/positions");
+//	auto colors = dag::cerealization::bin::load_vec<float>("../../cache/colors");
+//
+//	auto make_square_aabb = [](chag::Aabb aabb) {
+//		const glm::vec3 hsz    = aabb.getHalfSize();
+//		const glm::vec3 centre = aabb.getCentre();
+//		const glm::vec3 c{glm::max(hsz.x, glm::max(hsz.y, hsz.z))};
+//		aabb.min = centre - c;
+//		aabb.max = centre + c;
+//		return aabb;
+//	};
+//
+//	chag::Aabb aabb = std::accumulate(
+//			begin(points), end(points),
+//			chag::make_aabb(vec3{std::numeric_limits<float>::max()}, vec3{std::numeric_limits<float>::lowest()}),
+//			[](const chag::Aabb &lhs, const vec3 &rhs) {
+//				chag::Aabb result;
+//				result.min.x = std::min(lhs.min.x, rhs.x);
+//				result.min.y = std::min(lhs.min.y, rhs.y);
+//				result.min.z = std::min(lhs.min.z, rhs.z);
+//
+//				result.max.x = std::max(lhs.max.x, rhs.x);
+//				result.max.y = std::max(lhs.max.y, rhs.y);
+//				result.max.z = std::max(lhs.max.z, rhs.z);
+//				return result;
+//			});
+//
+//	chag::Aabb square_aabb = make_square_aabb(aabb);
+//
+//	std::vector<uint32_t> morton(points.size());
+//	std::transform(begin(points), end(points), begin(morton), [square_aabb](const vec3 &pos) {
+//					// First make sure the positions are in the range [0, GRID_RESOLUTION-1].
+//		const vec3 corrected_pos = clamp(
+//			GRID_RESOLUTION_FLOAT * ((pos - square_aabb.min) / (square_aabb.max - square_aabb.min)), 
+//			vec3(0.0f), 
+//			vec3(GRID_RESOLUTION_FLOAT - 1.0f)
+//		);
+//		return morton_encode_32(
+//			static_cast<uint32_t>(corrected_pos.x),
+//			static_cast<uint32_t>(corrected_pos.y),
+//			static_cast<uint32_t>(corrected_pos.z)
+//		);
+//	});
+//
+//	// Need to make sure colors and morton key and colors are sorted according to morton.
+//	{
+//		struct sort_elem 
+//		{
+//			uint32_t morton;
+//			vec4 color;
+//		};
+//		std::vector<sort_elem> sortme(morton.size());
+//		for(size_t i{0}; i<sortme.size(); ++i)
+//		{
+//			sortme[i].morton = morton[i];
+//			sortme[i].color  = vec4{ colors[4 * i + 0], colors[4 * i + 1], colors[4 * i + 2], colors[4 * i + 3] };
+//		}
+//		std::sort(begin(sortme), end(sortme), [](const sort_elem &lhs, const sort_elem &rhs){ return lhs.morton < rhs.morton; });
+//		for (size_t i{0}; i < sortme.size(); ++i) 
+//		{
+//			morton[i] = sortme[i].morton;
+//			colors[4 * i + 0] = sortme[i].color.x;
+//			colors[4 * i + 1] = sortme[i].color.y;
+//			colors[4 * i + 2] = sortme[i].color.z;
+//			colors[4 * i + 3] = sortme[i].color.w;
+//		}
+//	}
+//	DAGConstructor tmp;
+//	// The log2(GRID_RESOLUTION / 4) + 0 is because we use 4x4x4 leafs instead of 2x2x2. 
+//	// The final + 0 is a placeholder for when we need to merge dags.
+//	dag = tmp.build_dag(morton, colors, static_cast<int>(morton.size()), static_cast<int>(log2(GRID_RESOLUTION / 4) + 0), square_aabb);
+//}

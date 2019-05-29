@@ -7,7 +7,12 @@ find_package(SDL2 REQUIRED)
 find_package(GLEW REQUIRED)
 find_package(OpenGL REQUIRED)
 
-add_executable(my_exe src/my_exe.cpp)
+add_executable(my_exe
+	src/my_exe.cpp
+	src/voxelize_and_merge.h
+	src/voxelize_and_merge.cpp
+)
+
 target_link_libraries(my_exe 
 	PRIVATE 
 		SDL2::SDL2 
@@ -24,6 +29,8 @@ target_link_libraries(my_exe
 		DAGTracer 
 		DAGLoader
 		DAGConstructor
+		Voxelizer
+		glTFLoader
 )
 add_custom_target(copy_dlls
     COMMAND ${CMAKE_COMMAND} -E copy_directory

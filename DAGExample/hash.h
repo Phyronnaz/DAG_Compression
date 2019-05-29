@@ -1,11 +1,18 @@
+#pragma once
 #include <stdint.h>
-__device__ static inline uint64_t rotl64(uint64_t x, int8_t r) { return (x << r) | (x >> (64 - r)); }
+#ifdef __CUDACC__
+#define PREAMBLE __device__
+#else
+#define PREAMBLE
+#endif  // __CUDACC__
+
+PREAMBLE static inline uint64_t rotl64(uint64_t x, int8_t r) { return (x << r) | (x >> (64 - r)); }
 
 #define ROTL64(x, y) rotl64(x, y)
 #define BIG_CONSTANT(x) (x##LLU)
 #define getblock(p, i) (p[i])
 
-__device__ static inline uint64_t fmix64(uint64_t k) {
+PREAMBLE static inline uint64_t fmix64(uint64_t k) {
 	k ^= k >> 33;
 	k *= BIG_CONSTANT(0xff51afd7ed558ccd);
 	k ^= k >> 33;
@@ -14,7 +21,8 @@ __device__ static inline uint64_t fmix64(uint64_t k) {
 
 	return k;
 }
-__device__ void MurmurHash3_x64_128(const void *key, const int len, const uint32_t seed, void *out) {
+
+PREAMBLE void inline MurmurHash3_x64_128(const void *key, const int len, const uint32_t seed, void *out) {
 	const uint8_t *data = (const uint8_t *)key;
 	const int nblocks   = len / 16;
 	int i;

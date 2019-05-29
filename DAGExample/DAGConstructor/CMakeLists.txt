@@ -4,13 +4,17 @@ project(DAGConstructor LANGUAGES CXX CUDA)
 
 find_package(OpenGL REQUIRED) #FIXME: Remove. Need dependencies because of CudaHelpers....
 find_package(GLEW REQUIRED)	#FIXME: Remove. Need dependencies because of CudaHelpers....
-find_package(CUDA REQUIRED)
-list(APPEND CMAKE_CUDA_FLAGS " -gencode=arch=compute_50,code=sm_50")
+#find_package(CUDA REQUIRED)
+#list(APPEND CMAKE_CUDA_FLAGS " -gencode=arch=compute_52,code=sm_52")
+#list( APPEND CMAKE_CUDA_FLAGS " -gencode=arch=compute_75,code=sm_75 -use_fast_math")
+list( APPEND CMAKE_CUDA_FLAGS ${PROJECT_CUDA_FLAGS})
 
 
 add_library(DAGConstructor STATIC
 			DAGConstructor/DAGConstructor.cu
 			DAGConstructor/DAGConstructor.h
+			DAGConstructor/Merger.cpp
+			DAGConstructor/Merger.h
 )
 
 target_link_libraries(DAGConstructor

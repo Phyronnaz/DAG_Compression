@@ -1,6 +1,9 @@
 cmake_minimum_required(VERSION 3.7.1)
 project(Project)
 
+
+set( PROJECT_CUDA_FLAGS " -gencode=arch=compute_52,code=sm_52 -use_fast_math" )
+
 #########################################################
 # Ignore find_package for sub projects.
 #--------------------------------------------------------
@@ -35,6 +38,10 @@ target_include_directories(glm INTERFACE thirdparty/glm)
 add_library(cereal INTERFACE)
 target_include_directories(cereal INTERFACE thirdparty/cereal/include/)
 
+############ STB ############
+add_library(stb INTERFACE)
+target_include_directories(stb INTERFACE thirdparty/stb)
+
 
 
 add_subdirectory("DAGExample/utils")
@@ -42,6 +49,8 @@ add_subdirectory("DAGExample/DAG")
 add_subdirectory("DAGExample/DAGConstructor")
 add_subdirectory("DAGExample/DAGTracer")
 add_subdirectory("DAGExample/DAGLoader")
+add_subdirectory("DAGExample/Voxelizer")
+add_subdirectory("DAGExample/glTFLoader")
 #########################################################
 
 add_subdirectory(DAGExample)

@@ -26,8 +26,8 @@ namespace dag {
 template <class Archive>
 void serialize(Archive& archive, DAG& dag) {
 	archive(cereal::make_nvp("AABB", dag.m_aabb), cereal::make_nvp("levels", dag.m_levels),
-	        cereal::make_nvp("top levels", dag.m_top_levels),
-	        cereal::make_nvp("enclosed leaves", dag.m_enclosed_leaves), cereal::make_nvp("nodes", dag.m_data));
+					cereal::make_nvp("top levels", dag.m_top_levels),
+					cereal::make_nvp("enclosed leaves", dag.m_enclosed_leaves), cereal::make_nvp("nodes", dag.m_data));
 }
 
 namespace cerealization {

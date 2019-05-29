@@ -8,21 +8,59 @@
 #include "../bits_in_uint_array.h" //FIXME: Proper search paths
 #include <utils/view.h>
 
-///////////////////////////////////////////////////////////////////////////
-// Only need this right now. Dag should be on GPU when built. 
-///////////////////////////////////////////////////////////////////////////
-void temp_copy_dag_to_device(dag::DAG &dag)
+#include <bitset>
+#include <limits>
+
+template <typename T>
+unsigned popcnt_safe(T v) {
+	return static_cast<unsigned>(std::bitset<std::numeric_limits<T>::digits>(v).count());
+}
+
+void upload_to_gpu(dag::DAG &dag)
 {
-	if (dag.d_data)            { cudaFree(dag.d_data);			  dag.d_data		    = nullptr;}
-	if (dag.d_color_data)      { cudaFree(dag.d_color_data);	  dag.d_color_data	    = nullptr;}
+	std::vector<uint32_t> dag_array;
+	std::vector<uint32_t> lvl_offsets;
+	uint32_t ctr{0};
+	for (const auto &lvl : dag.m_data) 
+	{
+		lvl_offsets.push_back(ctr);
+		ctr += lvl.size();
+	}
+	dag_array.reserve(ctr);
+	auto tmp_dag = dag.m_data;
+	// For each lvl (we will not update the final lvl, hence the -1)
+	std::size_t levels_to_process = lvl_offsets.size() - 1;
+	for (std::size_t lvl{0}; lvl < levels_to_process; ++lvl) 
+	{
+		// For each node
+		for (std::size_t node_start{0}; node_start < tmp_dag[lvl].size(); ++node_start) 
+		{
+			uint32_t mask       = tmp_dag[lvl][node_start];
+			unsigned n_children = popcnt_safe(mask & 0xFF);
+			for (std::size_t child{0}; child < n_children; ++child) {
+				tmp_dag[lvl][node_start + child + 1] += lvl_offsets[lvl + 1];
+			}
+			node_start += n_children;
+		}
+	}
+
+	// Copy DAG to array
+	for (const auto &lvl : tmp_dag) { dag_array.insert(dag_array.end(), lvl.begin(), lvl.end()); }
+
+
+	if (dag.d_data)            { cudaFree(dag.d_data);            dag.d_data            = nullptr;}
+	if (dag.d_color_data)      { cudaFree(dag.d_color_data);      dag.d_color_data      = nullptr;}
 	if (dag.d_enclosed_leaves) { cudaFree(dag.d_enclosed_leaves); dag.d_enclosed_leaves = nullptr;}
-	cudaMalloc(&dag.d_data, dag.m_data.size() * sizeof(uint32_t));
-	cudaMemcpy(dag.d_data, &dag.m_data[0], dag.m_data.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
-	cudaMalloc(&dag.d_color_data, dag.m_colors.size() * sizeof(uint32_t));
-	cudaMemcpy(dag.d_color_data, dag.m_colors.data(), dag.m_colors.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
+
+	cudaMalloc(&dag.d_data, dag_array.size() * sizeof(uint32_t));
+	cudaMemcpy(dag.d_data,  dag_array.data(), dag_array.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
+
+	cudaMalloc(&dag.d_color_data, dag.m_base_colors.size() * sizeof(uint32_t));
+	cudaMemcpy(dag.d_color_data, dag.m_base_colors.data(), dag.m_base_colors.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
+
 	if (dag.m_enclosed_leaves.size() != 0){
 		cudaMalloc(&dag.d_enclosed_leaves, dag.m_enclosed_leaves.size() * sizeof(uint32_t));
-		cudaMemcpy(dag.d_enclosed_leaves, &dag.m_enclosed_leaves[0], dag.m_enclosed_leaves.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
+		cudaMemcpy(dag.d_enclosed_leaves,  dag.m_enclosed_leaves.data(), dag.m_enclosed_leaves.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	}
 }
 
@@ -164,8 +202,8 @@ uint8_t *  DAGTracer::calculateNextChildLookupTable()
 // childnodes that are intersected (ignoring whether they exist).
 ///////////////////////////////////////////////////////////////////////////////
 inline __device__ uint8_t getIntersectionMask(const uint3 & stack_path, const uint32_t nof_levels,
-											  const uint32_t stack_level, const float3 & ray_o,
-											  const float3 & ray_d, const float3 &inv_ray_dir)
+												const uint32_t stack_level, const float3 & ray_o,
+												const float3 & ray_d, const float3 &inv_ray_dir)
 {
 	///////////////////////////////////////////////////////////////////////////
 	// Node center is 0.5 * (aabb_min + aabb_max), which reduces to:
@@ -250,14 +288,22 @@ inline __device__ uint8_t getIntersectionMask(const uint3 & stack_path, const ui
 
 
 
-__global__ void primary_rays_kernel(uint32_t width, uint32_t height, 
-									float3 camera_pos, float3 ray_d_min, float3 ray_d_dx, float3 ray_d_dy,
-									uint32_t *dag, uint32_t nof_levels, cudaSurfaceObject_t path_buffer
+__global__ void
+primary_rays_kernel(
+	uint32_t width,
+	uint32_t height, 
+	float3 camera_pos,
+	float3 ray_d_min,
+	float3 ray_d_dx,
+	float3 ray_d_dy,
+	uint32_t *dag,
+	uint32_t nof_levels,
+	cudaSurfaceObject_t path_buffer
 #if NEXT_CHILD_LUT
-									,uint8_t *d_next_child_lookup_table
-#endif									
-									, int color_lookup_level
-									)
+	,uint8_t *d_next_child_lookup_table
+#endif
+	, int color_lookup_level
+)
 {
 	///////////////////////////////////////////////////////////////////////////
 	// Screen coordinates, discard outside
@@ -338,9 +384,10 @@ __global__ void primary_rays_kernel(uint32_t width, uint32_t height,
 		{
 			uint32_t node_offset = __popc((curr_se.masks & 0xFF) & ((1 << next_child) - 1)) + 1;
 
-			stack_path = make_uint3((stack_path.x << 1) | ((next_child & 0x4) >> 2),
-									(stack_path.y << 1) | ((next_child & 0x2) >> 1),
-									(stack_path.z << 1) | ((next_child & 0x1) >> 0));
+			stack_path = make_uint3(
+				(stack_path.x << 1) | ((next_child & 0x4) >> 2),
+				(stack_path.y << 1) | ((next_child & 0x2) >> 1),
+				(stack_path.z << 1) | ((next_child & 0x1) >> 0));
 			stack_level += 1;
 
 			///////////////////////////////////////////////////////////////////
@@ -422,7 +469,7 @@ inline __device__ float3 rgb888_to_float3(uint32_t rgb) {
 inline __device__ float3 rgb101210_to_float3(uint32_t rgb) {
 		return make_float3(	((rgb >> 0) & 0x3FF) / 1023.0f, 
 							((rgb >> 10) & 0xFFF) / 4095.0f,
-			                ((rgb >> 22) & 0x3FF) / 1023.0f);
+											((rgb >> 22) & 0x3FF) / 1023.0f);
 	}
 
 inline __device__ float3 rgb565_to_float3(uint32_t rgb) {
@@ -432,63 +479,56 @@ inline __device__ float3 rgb565_to_float3(uint32_t rgb) {
 	}
 
 inline __device__ uint32_t float3_to_rgb888(float3 c) {
-	    float R = fmin(1.0f, fmax(0.0f, c.x));
-	    float G = fmin(1.0f, fmax(0.0f, c.y));
-	    float B = fmin(1.0f, fmax(0.0f, c.z));
-	    return	(uint32_t(R * 255.0f) << 0) | 
+			float R = fmin(1.0f, fmax(0.0f, c.x));
+			float G = fmin(1.0f, fmax(0.0f, c.y));
+			float B = fmin(1.0f, fmax(0.0f, c.z));
+			return	(uint32_t(R * 255.0f) << 0) | 
 				(uint32_t(G * 255.0f) << 8) | 
 				(uint32_t(B * 255.0f) << 16);
-    }
+		}
 
 inline __device__ uint32_t float3_to_rgb101210(float3 c) {
-	    float R = fmin(1.0f, fmax(0.0f, c.x));
-	    float G = fmin(1.0f, fmax(0.0f, c.y));
-	    float B = fmin(1.0f, fmax(0.0f, c.z));
-	    return	(uint32_t(R * 1023.0f) << 0) | 
+			float R = fmin(1.0f, fmax(0.0f, c.x));
+			float G = fmin(1.0f, fmax(0.0f, c.y));
+			float B = fmin(1.0f, fmax(0.0f, c.z));
+			return	(uint32_t(R * 1023.0f) << 0) | 
 				(uint32_t(G * 4095.0f) << 10)| 
 				(uint32_t(B * 1023.0f) << 22);
-    }
+		}
 
 inline __device__ uint32_t float3_to_rgb565(float3 c) {
-	    float R = fmin(1.0f, fmax(0.0f, c.x));
-	    float G = fmin(1.0f, fmax(0.0f, c.y));
-	    float B = fmin(1.0f, fmax(0.0f, c.z));
-	    return	(uint32_t(R * 31.0f) << 0) | 
+			float R = fmin(1.0f, fmax(0.0f, c.x));
+			float G = fmin(1.0f, fmax(0.0f, c.y));
+			float B = fmin(1.0f, fmax(0.0f, c.z));
+			return	(uint32_t(R * 31.0f) << 0) | 
 				(uint32_t(G * 63.0f) << 5) | 
 				(uint32_t(B * 31.0f) << 11);
-    }
+		}
 
 
-__global__ void color_lookup_kernel_morton(
-                                           uint32_t width, 
-										   uint32_t height , 
-										   int nof_levels, 
-										   cudaSurfaceObject_t path_buffer,
-										   uint32_t *dag, 
-										   uint32_t *dag_color, 
-										   uint32_t *enclosed_leaves,
-										   uint32_t nof_top_levels, 
-										   cudaSurfaceObject_t output_image,
-										   bool all_colors,
-										   int stop_level
-									) 
+__global__ void 
+color_lookup_kernel_morton(
+	uint32_t width, 
+	uint32_t height , 
+	int nof_levels, 
+	cudaSurfaceObject_t path_buffer,
+	uint32_t *dag, 
+	uint32_t *dag_color, 
+	uint32_t *enclosed_leaves,
+	uint32_t nof_top_levels, 
+	cudaSurfaceObject_t output_image,
+	bool all_colors,
+	int stop_level
+) 
 {
-	//const int stop_level = 100; 
 	///////////////////////////////////////////////////////////////////////////
 	// Screen coordinates, discard outside
 	///////////////////////////////////////////////////////////////////////////
 	uint2 coord = make_uint2(blockIdx.x * blockDim.x + threadIdx.x, blockIdx.y * blockDim.y + threadIdx.y);
 	if (coord.x >= width || coord.y >= height) return;
 
-	//const int stop_level = stop_level_;
-	////const int stop_level = stop_level_ - coord.x / (width / 5);
-	////if (coord.x / (width / 5) != (coord.x + 1) / (width / 5)){
-	////	surf2Dwrite(0x0, output_image, (int)sizeof(uint32_t)* coord.x, coord.y, cudaBoundaryModeClamp);
-	////	return;
-	////}
 	uint32_t color = 0x0000FF;
 	uint3 path = make_uint3(surf2Dread<uint4>(path_buffer, coord.x * sizeof(uint4), coord.y));
-	//if (path != make_uint3(0, 0, 0)) { color = (path.x & 0xFF) | ((path.y & 0xFF) << 8) | ((path.z & 0xFF) << 16); }
 	uint32_t nof_leaves = 0;
 	uint32_t final_color_idx = 0;
 	if (path != make_uint3(0, 0, 0)) {
@@ -502,8 +542,8 @@ __global__ void color_lookup_kernel_morton(
 			//////////////////////////////////////////////////////////////////////////
 			uint32_t child_mask = dag[node_index];
 			uint8_t child_idx = (((path.x >> (nof_levels - level) & 0x1) == 0) ? 0 : 4) |
-				                (((path.y >> (nof_levels - level) & 0x1) == 0) ? 0 : 2) |
-				                (((path.z >> (nof_levels - level) & 0x1) == 0) ? 0 : 1);
+												(((path.y >> (nof_levels - level) & 0x1) == 0) ? 0 : 2) |
+												(((path.z >> (nof_levels - level) & 0x1) == 0) ? 0 : 1);
 			if (level == stop_level && all_colors) {
 				final_color_idx = nof_leaves; 
 				break;
@@ -520,11 +560,6 @@ __global__ void color_lookup_kernel_morton(
 			//////////////////////////////////////////////////////////////////////////
 			// Find out how many leafs are in the children preceeding this
 			//////////////////////////////////////////////////////////////////////////
-
-			// TODO: Need to handle level nof_levels - 2 where we will now have one extra color
-			//       per 
-
-
 			if (level == nof_levels - 2) 
 			{
 				// If only voxel colors, just count the number of preceeding leaves
@@ -539,7 +574,11 @@ __global__ void color_lookup_kernel_morton(
 					uint32_t leafmask0 = dag[n_index];
 					uint32_t leafmask1 = dag[n_index + 1];
 					uint64_t current_leafmask = uint64_t(leafmask1) << 32 | uint64_t(leafmask0);
-					if (all_colors) { // 2x2x2 nodes
+					if (all_colors)
+					{ // 2x2x2 nodes
+						// This is way better:
+						// nof_leaves += __popc(__vsetgtu4(leafmask0, 0));
+						// nof_leaves += __popc(__vsetgtu4(leafmask1, 0));
 						n_child_offset += (current_leafmask & 0x00000000000000FF) == 0 ? 0 : 1; 
 						n_child_offset += (current_leafmask & 0x000000000000FF00) == 0 ? 0 : 1;
 						n_child_offset += (current_leafmask & 0x0000000000FF0000) == 0 ? 0 : 1;
@@ -552,7 +591,7 @@ __global__ void color_lookup_kernel_morton(
 					// 1x1x1 nodes
 					n_child_offset += __popcll(current_leafmask);
 				}
-				if (stop_level == nof_levels - 1 && all_colors) {
+				if (stop_level == nof_levels - 2 && all_colors) {
 					final_color_idx = nof_leaves + n_child_offset;
 					break;
 				}
@@ -571,7 +610,7 @@ __global__ void color_lookup_kernel_morton(
 				// node that we reside in. 
 				if (all_colors){
 					uint64_t masked_leafmask;
-					if (stop_level == nof_levels) {
+					if (stop_level == nof_levels - 1) {
 						masked_leafmask = current_leafmask & ((1ull << ((final_idx / 8) * 8)) - 1ull);
 					}
 					else {
@@ -590,7 +629,7 @@ __global__ void color_lookup_kernel_morton(
 					}
 					// 1x1x1 nodes
 					n_child_offset += __popcll(masked_leafmask);
-					if (stop_level > nof_levels) n_child_offset -= 1;
+					if (stop_level >= nof_levels) n_child_offset -= 1;
 					final_color_idx = nof_leaves + n_child_offset;
 				}
 				else {
@@ -645,12 +684,12 @@ struct render_param {
 		glm::vec3 camera_dir         = -camera.R[2];
 		glm::vec3 camera_up          = camera.R[1];
 		glm::vec3 camera_right       = camera.R[0];
-		float camera_fov          = camera.m_fov / 2.0f * (float(M_PI) / 180.0f);
-		float camera_aspect_ratio = float(w) / float(h);
+		float camera_fov             = camera.m_fov / 2.0f * (float(M_PI) / 180.0f);
+		float camera_aspect_ratio    = float(w) / float(h);
 		glm::vec3 Z                  = camera_dir * cos(camera_fov);
 		glm::vec3 X                  = camera_right * sin(camera_fov) * camera_aspect_ratio;
 		glm::vec3 Y                  = camera_up * sin(camera_fov);
-		p_bottom_left             = camera_pos + Z - Y - X;
+		p_bottom_left                = camera_pos + Z - Y - X;
 		glm::vec3 p_top_left         = camera_pos + Z + Y - X;
 		glm::vec3 p_bottom_right     = camera_pos + Z - Y + X;
 
@@ -658,14 +697,14 @@ struct render_param {
 		// Transform these points into "DAG" space and generate pixel dx/dy
 		///////////////////////////////////////////////////////////////////////////
 		glm::vec3 translation = -dag.m_aabb.min;
-		float fres         = float(dag.geometryResolution());
+		float fres            = float(dag.geometryResolution());
 		glm::vec3 scale       = glm::vec3(fres) / glm::vec3(dag.m_aabb.getHalfSize() * 2.0f);
-		camera_pos         = (camera_pos + translation) * scale;
-		p_bottom_left      = (p_bottom_left + translation) * scale;
-		p_top_left         = (p_top_left + translation) * scale;
-		p_bottom_right     = (p_bottom_right + translation) * scale;
-		d_dx               = (p_bottom_right - p_bottom_left) * (1.0f / float(w));
-		d_dy               = (p_top_left - p_bottom_left) * (1.0f / float(h));
+		camera_pos            = (camera_pos     + translation) * scale;
+		p_bottom_left         = (p_bottom_left  + translation) * scale;
+		p_top_left            = (p_top_left     + translation) * scale;
+		p_bottom_right        = (p_bottom_right + translation) * scale;
+		d_dx                  = (p_bottom_right - p_bottom_left) * (1.0f / float(w));
+		d_dy                  = (p_top_left     - p_bottom_left) * (1.0f / float(h));
 	}
 };
 
@@ -675,48 +714,39 @@ void DAGTracer::resolve_paths(const dag::DAG &dag, const chag::view & camera, in
 	m_path_buffer.mapSurfaceObject();
 	m_depth_buffer.mapSurfaceObject();
 
-    auto to_float3 = [](const glm::vec3 &v){
-        return make_float3(v.x, v.y, v.z);
-    };
+		auto to_float3 = [](const glm::vec3 &v){
+				return make_float3(v.x, v.y, v.z);
+		};
 
 	render_param rp(camera, dag, m_width, m_height);
 
-	///////////////////////////////////////////////////////////////////////////
-	// Trace primary rays
-	///////////////////////////////////////////////////////////////////////////
 	dim3 block_dim = dim3(8, 32);
 	dim3 grid_dim = dim3(m_width / block_dim.x + 1, m_height / block_dim.y + 1);
 	primary_rays_kernel <<<grid_dim, block_dim >>>(
 		m_width,
-        m_height,
-        to_float3(rp.camera_pos),
-        to_float3(rp.p_bottom_left),
+		m_height,
+		to_float3(rp.camera_pos),
+		to_float3(rp.p_bottom_left),
 		to_float3(rp.d_dx),
-        to_float3(rp.d_dy),
-        dag.d_data,
-        dag.nofGeometryLevels(),
+		to_float3(rp.d_dy),
+		dag.d_data,
+		dag.nofGeometryLevels(),
 		m_path_buffer.m_cuda_surface_object
 #if NEXT_CHILD_LUT
 		, d_next_child_lookup_table
 #endif
-		,color_lookup_level);
+		,
+		dag.colors_in_all_nodes ? color_lookup_level : dag.nofGeometryLevels()
+		);
 	m_color_buffer.unmapSurfaceObject(); 
 	m_path_buffer.unmapSurfaceObject(); 
 	m_depth_buffer.unmapSurfaceObject();
 }
 
-void DAGTracer::resolve_colors(const dag::DAG &dag, 
-	/*elmar::ElmarData & elmar_data, ours::OursData & ours_data, ours_varbit::OursData* varbit_data,*/
-	bool all_colors, int color_lookup_level)
+void DAGTracer::resolve_colors(const dag::DAG &dag, int color_lookup_level)
 {
 	m_color_buffer.mapSurfaceObject();
 	m_path_buffer.mapSurfaceObject();
-	m_depth_buffer.mapSurfaceObject();
-
-
-	///////////////////////////////////////////////////////////////////////////
-	// Color dem pixels
-	///////////////////////////////////////////////////////////////////////////
 	dim3 block_dim = dim3(8, 32);
 	dim3 grid_dim = dim3(m_width / block_dim.x + 1, m_height / block_dim.y + 1);
 	color_lookup_kernel_morton << <grid_dim, block_dim >> >(
@@ -729,9 +759,9 @@ void DAGTracer::resolve_colors(const dag::DAG &dag,
 			dag.d_enclosed_leaves,
 			dag.m_top_levels,
 			m_color_buffer.m_cuda_surface_object,
-			all_colors,
-			color_lookup_level);
+			dag.colors_in_all_nodes,
+			dag.colors_in_all_nodes ? color_lookup_level : dag.nofGeometryLevels()
+		);
 	m_color_buffer.unmapSurfaceObject(); 
 	m_path_buffer.unmapSurfaceObject(); 
-	m_depth_buffer.unmapSurfaceObject();
 }

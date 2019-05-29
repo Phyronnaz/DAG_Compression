@@ -8,7 +8,7 @@ class orientation {
 	using mat4 = glm::mat4;
 	using vec3 = glm::vec3;
 
-    orientation() {};
+	orientation() {};
 	~orientation() {};
 	orientation(vec3 pos, vec3 dir, vec3 up);
 
