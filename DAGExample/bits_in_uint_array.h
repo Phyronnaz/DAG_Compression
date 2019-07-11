@@ -39,8 +39,8 @@ PREAMBLE inline uint64_t insert_bits(uint32_t val, int bits, uint32_t * array, u
 
 PREAMBLE inline uint32_t extract_bits(int bits, uint32_t * array, uint64_t bitptr) {
 	if (bits == 0) return 0;
-	uint32_t ptr_word = bitptr / 32ull;
-	uint32_t ptr_bit = bitptr % 32ull;
+	uint32_t ptr_word = uint32_t(bitptr / 32ull);
+	uint32_t ptr_bit = uint32_t(bitptr % 32ull);
 	int bits_left = 32 - ptr_bit;
 	// Need to be careful not to try to shift >= 32 steps (undefined)
 	uint32_t upper_mask = (bits_left == 32) ? 0xFFFFFFFF : (~(0xFFFFFFFFu << bits_left));

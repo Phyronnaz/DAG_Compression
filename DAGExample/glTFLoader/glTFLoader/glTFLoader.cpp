@@ -287,7 +287,7 @@ Scene load(const std::string &path, const std::string &file) {
 	///////////////// NOTE ///////////////////////////////////////////
 	// Can be done on parsing of primitives.                        //
 	//////////////////////////////////////////////////////////////////
-	auto getAABB_ac = [&result](Accessor &ac, Accessor &indices) {
+	auto getAABB_ac = [&result](Accessor &ac, Accessor &indices, SceneNode& scene_node) {
 		if(ac.type != Accessor::Type::VEC3) throw "Invalid type";
 		const auto  &bv = result.bufferViews[ac.bufferView];
 		std::size_t offset = ac.byteOffset + bv.byteOffset;
@@ -309,17 +309,19 @@ Scene load(const std::string &path, const std::string &file) {
 		chag::Aabb aabb = chag::make_inverse_extreme_aabb();
 		for(std::size_t i{0}; i<ac.count; ++i){
 			//GLushort vtx_idx = *(idx+i);
-			aabb = chag::combine(aabb, glm::vec3(tmp[0 + 3*i],tmp[1 + 3*i],tmp[2 + 3*i]));
+			aabb = chag::combine(aabb, glm::vec3(tmp[0 + 3 * i], tmp[1 + 3 * i], tmp[2 + 3 * i]));
+				// Kinda random transforms, hopefully works - Victor // does not because of relative transforms or smthg
+				//(scene_node.rotation * (glm::vec3(tmp[0 + 3 * i], tmp[1 + 3 * i], tmp[2 + 3 * i]) + scene_node.translation)) * scene_node.scale);
 		}
 		glUnmapBuffer(GL_ARRAY_BUFFER);
 		return aabb;
 	};
 
-	auto createAABB_prim = [&](Primitive &prim) {
+	auto createAABB_prim = [&](Primitive &prim, auto& scene_node) {
 		chag::Aabb aabb = chag::make_inverse_extreme_aabb();
 		for (const auto &attr : prim.attributes) {
 			if (attr.index == Attribute::POSITION) {
-				 aabb = chag::combine(aabb, getAABB_ac(result.accsessors[attr.accsessor], result.accsessors[prim.indices]));
+				 aabb = chag::combine(aabb, getAABB_ac(result.accsessors[attr.accsessor], result.accsessors[prim.indices], scene_node));
 			}
 		}
 		prim.aabb = aabb;
@@ -331,7 +333,7 @@ Scene load(const std::string &path, const std::string &file) {
 		if (SceneNode::hasProperties(node, SceneNode::MESH)) {
 			Mesh &mesh = result.meshes[node.mesh_id];
 			for (auto &prim : mesh.primitives) {
-				createAABB_prim(prim);
+				createAABB_prim(prim, node);
 				aabb = chag::combine(aabb, prim.aabb);
 			}
 		}

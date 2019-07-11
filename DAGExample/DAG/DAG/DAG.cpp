@@ -73,7 +73,7 @@ void DAG::calculateColorForAllNodes() {
 			n_child_offset = 1;
 			if (level == m_levels - 1) 
 			{
-				for(int i = 0; i<n_children; ++i)
+				for(int i = 0; i<(int)n_children; ++i)
 				{
 					n_child_offset += 1; // 4x4x4 node
 					const uint32_t n_index          = m_data[level][node_index + 1 + i];
@@ -96,11 +96,11 @@ void DAG::calculateColorForAllNodes() {
 			}
 			else
 			{
-				for(int i = 0; i<n_children; ++i)
+				for(int i = 0; i<(int)n_children; ++i)
 				{
 					const uint32_t n_index    = m_data[level][node_index + 1 + i];
 					const uint32_t child_mask = m_data[level+1][n_index];
-					if(level + 1 < m_top_levels)
+					if(level + 1 < (int)m_top_levels)
 					{
 						n_child_offset += m_enclosed_leaves[(child_mask >> 8)];
 					}
@@ -114,7 +114,7 @@ void DAG::calculateColorForAllNodes() {
 			// We don't store nodes in subtree for root.
 			if(level != 0)
 			{
-				if(level < m_top_levels)
+				if(level < (int)m_top_levels)
 				{
 					m_enclosed_leaves[node_mask >> 8] = n_child_offset;
 				}

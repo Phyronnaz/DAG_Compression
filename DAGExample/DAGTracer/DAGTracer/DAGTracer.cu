@@ -16,7 +16,7 @@ unsigned popcnt_safe(T v) {
 	return static_cast<unsigned>(std::bitset<std::numeric_limits<T>::digits>(v).count());
 }
 
-void upload_to_gpu(dag::DAG &dag)
+std::vector<uint32_t> upload_to_gpu(dag::DAG &dag)
 {
 	std::vector<uint32_t> dag_array;
 	std::vector<uint32_t> lvl_offsets;
@@ -24,7 +24,7 @@ void upload_to_gpu(dag::DAG &dag)
 	for (const auto &lvl : dag.m_data) 
 	{
 		lvl_offsets.push_back(ctr);
-		ctr += lvl.size();
+		ctr += (uint32_t)lvl.size();
 	}
 	dag_array.reserve(ctr);
 	auto tmp_dag = dag.m_data;
@@ -62,6 +62,7 @@ void upload_to_gpu(dag::DAG &dag)
 		cudaMalloc(&dag.d_enclosed_leaves, dag.m_enclosed_leaves.size() * sizeof(uint32_t));
 		cudaMemcpy(dag.d_enclosed_leaves,  dag.m_enclosed_leaves.data(), dag.m_enclosed_leaves.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	}
+	return dag_array;
 }
 
 ///////////////////////////////////////////////////////////////////////////////

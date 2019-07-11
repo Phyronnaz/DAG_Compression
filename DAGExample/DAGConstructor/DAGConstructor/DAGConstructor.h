@@ -60,7 +60,7 @@ class DAGConstructor {
 		// If the geometry resolution is too high, we need to split the geometry into smaller sub volumes
 		// and process them independently. They are later merged to the final result.
 		int nof_splits = std::max(0, static_cast<int>(log2(geometry_resolution) - log2(max_subdag_resolution)));
-		for (unsigned i = 0; i < nof_splits; ++i) { aabb_list = merger::split_aabb(std::move(aabb_list)); }
+		for (unsigned i = 0; i < (unsigned)nof_splits; ++i) { aabb_list = merger::split_aabb(std::move(aabb_list)); }
 
 		// Create sub DAGs from the sub volumes. Note that not all volumes may contain geometry, hence std::optional.
 		std::vector<std::optional<dag::DAG>> dags(aabb_list.size());

@@ -48,10 +48,10 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 		// ... So let's not.
 		node.model_matrix =
 			glm::mat4{1.0f};
-			//node.model_matrix *
-			//glm::translate(glm::mat4{1.0f}, scene_node.translation) *
-			//glm::mat4_cast(scene_node.rotation) *
-			//glm::scale(glm::mat4{1.0f}, scene_node.scale);
+			/*node.model_matrix *
+			glm::translate(glm::mat4{1.0f}, scene_node.translation) *
+			glm::mat4_cast(scene_node.rotation) *
+			glm::scale(glm::mat4{1.0f}, scene_node.scale);*/
 
 		if (SceneNode::hasProperties(scene_node, F::CHILDREN)) {
 			for (std::size_t child_index : scene_node.children) { stack.push({node.model_matrix, child_index}); }

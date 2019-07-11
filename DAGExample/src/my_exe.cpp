@@ -1,6 +1,7 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
+#include <fstream>
 #include <numeric>
 #include <string>
 #include <stack>
@@ -189,8 +190,41 @@ struct AppState {
 int main(int argc, char *argv[]) {
 	init();
 
-	constexpr int dag_resolution{4096*2};
-	auto dag = DAG_from_scene(dag_resolution, R"(..\..\assets\Sponza\glTF\)", "Sponza.gltf");
+	constexpr int dag_resolution{1 << 16};
+	auto dag = DAG_from_scene(dag_resolution, R"(assets\duck\glTF\)", "duck.gltf");
+	if (dag)
+	{
+		struct MyHeader
+		{
+			float MinX;
+			float MinY;
+			float MinZ;
+			float MaxX;
+			float MaxY;
+			float MaxZ;
+			uint32_t levels;
+			uint32_t topLevels;
+			uint32_t numNodes;
+			uint32_t numEnclosedLeaves;
+			uint32_t numColors;
+		};
+		auto nodes = upload_to_gpu(*dag);
+		MyHeader myHeader{
+			dag->m_aabb.min.r, dag->m_aabb.min.g, dag->m_aabb.min.b,
+			dag->m_aabb.max.r, dag->m_aabb.max.g, dag->m_aabb.max.b,
+			dag->m_levels,
+			dag->m_top_levels,
+			nodes.size(),
+			dag->m_enclosed_leaves.size(),
+			dag->m_base_colors.size()
+		};
+		std::ofstream of("result.bin", std::ios::binary);
+		of.write((char*)&myHeader, sizeof(MyHeader));
+		of.write((char*)nodes.data(), myHeader.numNodes * sizeof(uint32_t));
+		of.write((char*)dag->m_enclosed_leaves.data(), myHeader.numEnclosedLeaves * sizeof(uint32_t));
+		of.write((char*)dag->m_base_colors.data(), myHeader.numColors * sizeof(uint32_t));
+		of.close();
+	}
 	//dag->calculateColorForAllNodes();
 	DAGTracer dag_tracer;
 	dag_tracer.resize(screen_dim.x, screen_dim.y);

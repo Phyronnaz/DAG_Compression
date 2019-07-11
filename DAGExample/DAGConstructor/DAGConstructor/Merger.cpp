@@ -70,7 +70,7 @@ index_offset(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt d_first)
 	{
 		if (*first1 == *first2)
 		{
-			*(d_first++) = ctr;
+			*(d_first++) = (uint32_t)ctr;
 			++first1;
 		}
 		++first2;
@@ -121,7 +121,7 @@ get_pointers(const std::vector<std::vector<uint32_t>> &dag, const uint32_t lvl)
 	{
 		result.second.emplace_back(current_dag_lvl[i]);
 		uint32_t n_children = popcnt_safe(current_dag_lvl[i] & 0xFF);
-		for(int c{1}; c <= n_children; ++c)
+		for(int c{1}; c <= (int)n_children; ++c)
 		{
 			pointers.emplace_back(PointerData{current_dag_lvl[i+c], idx++, 0});
 		}
@@ -296,7 +296,7 @@ shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 				// Increase offsset by the number of pointers plus the mask.
 				node_start_new.emplace_back(n_children + 1);
 
-				for(int n{0}; n < n_children; ++n)
+				for(int n{0}; n < (int)n_children; ++n)
 				{
 					uint32_t original_child_id = pointers_mask.first[dag_index];
 
@@ -308,7 +308,7 @@ shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 			}
 			else
 			{
-				uint32_t dag_index = 2*(lhs_hash_match ? lhs_hash_index : rhs_hash_index);
+				uint32_t dag_index = 2*uint32_t(lhs_hash_match ? lhs_hash_index : rhs_hash_index);
 				auto &dag = lhs_hash_match ? lhs.m_data[l_lvl] : rhs.m_data[r_lvl];
 				new_level.emplace_back(dag[dag_index]);
 				new_level.emplace_back(dag[dag_index + 1]);
@@ -365,7 +365,7 @@ find_offset(const dag::DAG &dag, uint32_t lvl, uint64_t hash)
 	auto found      = std::find(hash_begin, hash_end, hash);
 	if (found != hash_end)
 	{
-		uint32_t hash_idx = std::distance(hash_begin, found);
+		uint32_t hash_idx = (uint32_t)std::distance(hash_begin, found);
 		uint32_t current_offset{0};
 		for (uint32_t i{0}; i < hash_idx; ++i)
 		{
@@ -425,7 +425,7 @@ merge(const std::array<std::optional<dag::DAG>, 8> &batch)
 			std::accumulate(
 				dags.begin(),
 				dags.end(),
-				0,
+				(std::size_t)0,
 				[](std::size_t acc, const dag::DAG *dag) { return acc + dag->m_base_colors.size(); }
 			);
 
@@ -445,7 +445,7 @@ merge(const std::array<std::optional<dag::DAG>, 8> &batch)
 		dag->m_levels++;
 		dag->m_top_levels++;
 		dag->m_enclosed_leaves.push_back(enclosed);
-		root.push_back(mask | ((dag->m_enclosed_leaves.size() -1) << 8));
+		root.push_back(mask | (uint32_t(dag->m_enclosed_leaves.size() -1) << 8));
 		std::sort(
 			node_info.begin(),
 			node_info.end(),

@@ -141,9 +141,9 @@ struct Scene {
 
 void inline free_scene(Scene &scene)
 {
-	glDeleteBuffers(scene.buffer_objects.size(), scene.buffer_objects.data());
+	glDeleteBuffers((uint32_t)scene.buffer_objects.size(), scene.buffer_objects.data());
 	glDeleteVertexArrays(1, &MASTER_VAO);
-	glDeleteTextures(scene.textures.size(), scene.textures.data());
+	glDeleteTextures((uint32_t)scene.textures.size(), scene.textures.data());
 }
 
 
