@@ -10,16 +10,24 @@
 __device__ inline int getGlobalIdx_1D_1D() { return blockIdx.x * blockDim.x + threadIdx.x; }
 #endif
 __host__ __device__ float3 inline operator * (const float a, const float3 &b) { return make_float3(a * b.x, a * b.y, a * b.z); };
+__host__ __device__ double3 inline operator * (const double a, const double3 &b) { return make_double3(a * b.x, a * b.y, a * b.z); };
 __host__ __device__ float3 inline operator * (const float3 &b, const float a) { return a * b; };
+__host__ __device__ double3 inline operator * (const double3 &b, const double a) { return a * b; };
 __host__ __device__ float3 inline operator - (const float3 &a, const float3 &b) { return make_float3(a.x - b.x, a.y - b.y, a.z - b.z); };
+__host__ __device__ double3 inline operator - (const double3 &a, const double3 &b) { return make_double3(a.x - b.x, a.y - b.y, a.z - b.z); };
 __host__ __device__ float3 inline operator + (const float3 &a, const float3 &b) { return make_float3(a.x + b.x, a.y + b.y, a.z + b.z); };
+__host__ __device__ double3 inline operator + (const double3 &a, const double3 &b) { return make_double3(a.x + b.x, a.y + b.y, a.z + b.z); };
 __host__ __device__ float3 inline operator * (const float3 &a, const float3 &b) { return make_float3(a.x * b.x, a.y * b.y, a.z * b.z); };
+__host__ __device__ double3 inline operator * (const double3 &a, const double3 &b) { return make_double3(a.x * b.x, a.y * b.y, a.z * b.z); };
 __host__ __device__ float3 inline operator / (const float3 &a, const float3 &b) { return make_float3(a.x / b.x, a.y / b.y, a.z / b.z); };
 __host__ __device__ float3 inline operator - (float3 a) { return make_float3(-a.x, -a.y, -a.z); };
 __host__ __device__ float3 inline make_float3(float a) { return make_float3(a,a,a); };
 __host__ __device__ float  inline dot(const float3 &a, const float3 &b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
+__host__ __device__ double  inline dot(const double3&a, const double3&b) { return a.x * b.x + a.y * b.y + a.z * b.z; }
 __host__ __device__ float  inline length(float3 a) { return sqrt(dot(a, a)); }
+__host__ __device__ double  inline length(double3 a) { return sqrt(dot(a, a)); }
 __host__ __device__ float3 inline normalize(float3 a) { return (1.0f / length(a)) * a; }
+__host__ __device__ double3 inline normalize(double3 a) { return (1.0 / length(a)) * a; }
 __host__ __device__ uint3  inline operator << (const uint3 &v, const int shift) { return make_uint3(v.x << shift, v.y << shift, v.z << shift); }
 __host__ __device__ uint3  inline operator + (const uint3 &a, const uint3 &b) { return make_uint3(a.x + b.x, a.y + b.y, a.z + b.z); };
 __host__ __device__ uint3  inline operator - (const uint3 &a, const uint3 &b) { return make_uint3(a.x - b.x, a.y - b.y, a.z - b.z); };
@@ -27,6 +35,8 @@ __host__ __device__ uint3  inline make_uint3(uint32_t a) { return make_uint3(a, 
 __host__ __device__ bool   inline operator == (const uint3 & a, const uint3 & b) { return (a.x == b.x) && (a.y == b.y) && (a.z == b.z); }
 __host__ __device__ bool   inline operator != (const uint3 & a, const uint3 & b) { return !(a == b); }
 __host__ __device__ float3 inline make_float3(const uint3 &a) { return make_float3(float(a.x), float(a.y), float(a.z)); };
+__host__ __device__ float3 inline make_float3(const double3 &a) { return make_float3(float(a.x), float(a.y), float(a.z)); };
+__host__ __device__ double3 inline make_double3(const float3 &a) { return make_double3(double(a.x), double(a.y), double(a.z)); };
 __host__ __device__ uint3  inline make_uint3(const uint4 &v) { return make_uint3(v.x, v.y, v.z); }
 __host__ __device__ uint4  inline make_uint4(const uint3 &v, uint32_t a) { return make_uint4(v.x, v.y, v.z, a); }
 __host__ __device__ float3 inline operator / (const float f, const float3 &v) { return make_float3(f / v.x, f / v.y, f / v.z); };

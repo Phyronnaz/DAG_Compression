@@ -190,8 +190,8 @@ struct AppState {
 int main(int argc, char *argv[]) {
 	init();
 
-	constexpr int dag_resolution{1 << 16};
-	auto dag = DAG_from_scene(dag_resolution, R"(assets\duck\glTF\)", "duck.gltf");
+	constexpr int dag_resolution{1 << 13};
+	auto dag = DAG_from_scene(dag_resolution, R"(assets\EpicCitadel\glTF\)", "EpicCitadel.gltf");
 	if (dag)
 	{
 		struct MyHeader

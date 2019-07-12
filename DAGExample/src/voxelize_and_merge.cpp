@@ -107,6 +107,7 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 					const auto &pbr = material.specular_glossiness;
 					bindTexture(pbr.diffuseTexture, 0);
 				}
+				bindTexture(material.normalTexture, 1);
 
 				const auto &ind = scene.accsessors[prim.indices];
 				const auto &bv  = scene.bufferViews[ind.bufferView];

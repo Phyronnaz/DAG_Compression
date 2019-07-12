@@ -54,12 +54,15 @@ void main()
 
 	gl_Position = proj * gl_in[0].gl_Position;
 	uv = uv_VS[0];
+	fs_normal = gs_normal[0];
 	EmitVertex();
 	gl_Position = proj * gl_in[1].gl_Position;
 	uv = uv_VS[1];
+	fs_normal = gs_normal[1];
 	EmitVertex();
 	gl_Position = proj * gl_in[2].gl_Position;
 	uv = uv_VS[2];
+	fs_normal = gs_normal[2];
 	EmitVertex();
 }
 )""

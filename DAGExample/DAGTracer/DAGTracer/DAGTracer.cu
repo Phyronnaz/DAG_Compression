@@ -295,8 +295,8 @@ primary_rays_kernel(
 	uint32_t height, 
 	float3 camera_pos,
 	float3 ray_d_min,
-	float3 ray_d_dx,
-	float3 ray_d_dy,
+	double3 ray_d_dx,
+	double3 ray_d_dy,
 	uint32_t *dag,
 	uint32_t nof_levels,
 	cudaSurfaceObject_t path_buffer
@@ -316,7 +316,7 @@ primary_rays_kernel(
 	// Calculate ray for pixel
 	///////////////////////////////////////////////////////////////////////////
 	const float3 ray_o = camera_pos; 
-	const float3 ray_d = normalize((ray_d_min + coord.x * ray_d_dx + coord.y * ray_d_dy) - ray_o); 
+	const float3 ray_d = make_float3(normalize((make_double3(ray_d_min) + coord.x * ray_d_dx + coord.y * ray_d_dy) - make_double3(ray_o))); 
 	float3 inv_ray_dir = 1.0f / ray_d;
 
 	///////////////////////////////////////////////////////////////////////////
@@ -675,8 +675,8 @@ color_lookup_kernel_morton(
 struct render_param {
 	glm::vec3 camera_pos;
 	glm::vec3 p_bottom_left;
-	glm::vec3 d_dx;
-	glm::vec3 d_dy;
+	double3 d_dx;
+	double3 d_dy;
 	render_param(const chag::view &camera, const dag::DAG &dag, uint32_t w, uint32_t h) {
 		///////////////////////////////////////////////////////////////////////////
 		// Calculate the camera position and three points spanning the near quad
@@ -704,8 +704,10 @@ struct render_param {
 		p_bottom_left         = (p_bottom_left  + translation) * scale;
 		p_top_left            = (p_top_left     + translation) * scale;
 		p_bottom_right        = (p_bottom_right + translation) * scale;
-		d_dx                  = (p_bottom_right - p_bottom_left) * (1.0f / float(w));
-		d_dy                  = (p_top_left     - p_bottom_left) * (1.0f / float(h));
+
+		auto to_double3 = [](auto v) {return make_double3(v.x, v.y, v.z); };
+		d_dx                  = to_double3(p_bottom_right - p_bottom_left) * (1.0 / double(w));
+		d_dy                  = to_double3(p_top_left     - p_bottom_left) * (1.0 / double(h));
 	}
 };
 
@@ -728,8 +730,8 @@ void DAGTracer::resolve_paths(const dag::DAG &dag, const chag::view & camera, in
 		m_height,
 		to_float3(rp.camera_pos),
 		to_float3(rp.p_bottom_left),
-		to_float3(rp.d_dx),
-		to_float3(rp.d_dy),
+		rp.d_dx,
+		rp.d_dy,
 		dag.d_data,
 		dag.nofGeometryLevels(),
 		m_path_buffer.m_cuda_surface_object
