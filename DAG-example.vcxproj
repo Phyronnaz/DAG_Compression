@@ -20,6 +20,10 @@
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="DAGExample\bits_in_uint_array.h" />
+    <ClInclude Include="DAGExample\ColorCompression\ColorCompression\BlockBuild.h" />
+    <ClInclude Include="DAGExample\ColorCompression\ColorCompression\ours.h" />
+    <ClInclude Include="DAGExample\ColorCompression\ColorCompression\ours_varbit.h" />
+    <ClInclude Include="DAGExample\ColorCompression\ColorCompression\svd.h" />
     <ClInclude Include="DAGExample\CudaHelpers.h" />
     <ClInclude Include="DAGExample\DAGConstructor\DAGConstructor\DAGConstructor.h" />
     <ClInclude Include="DAGExample\DAGConstructor\DAGConstructor\Merger.h" />
@@ -377,6 +381,9 @@
     <ClInclude Include="thirdparty\stb\stb\stretchy_buffer.h" />
   </ItemGroup>
   <ItemGroup>
+    <ClCompile Include="DAGExample\ColorCompression\ColorCompression\ours.cpp" />
+    <ClCompile Include="DAGExample\ColorCompression\ColorCompression\ours_varbit.cpp" />
+    <ClCompile Include="DAGExample\ColorCompression\ColorCompression\svd.cpp" />
     <ClCompile Include="DAGExample\DAGConstructor\DAGConstructor\Merger.cpp" />
     <ClCompile Include="DAGExample\DAGLoader\DAGLoader\DAGLoader.cpp" />
     <ClCompile Include="DAGExample\DAG\DAG\DAG.cpp" />
@@ -392,6 +399,7 @@
     <ClCompile Include="thirdparty\stb\stb\stb_vorbis.c" />
   </ItemGroup>
   <ItemGroup>
+    <CudaCompile Include="DAGExample\ColorCompression\ColorCompression\ours.cu" />
     <CudaCompile Include="DAGExample\DAGConstructor\DAGConstructor\DAGConstructor.cu">
       <FileType>Document</FileType>
     </CudaCompile>
@@ -596,7 +604,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>C:\Users\victor\Desktop\DAG-example\thirdparty\stb;C:\Users\victor\Desktop\DAG-example\thirdparty\cereal\include;C:\Users\victor\Desktop\DAG-example\thirdparty\glm;C:\Users\victor\Desktop\DAG-example\DAGExample\Voxelizer;C:\Users\victor\Desktop\DAG-example\DAGExample\glTFLoader;C:\Users\victor\Desktop\DAG-example\DAGExample\DAGTracer;C:\Users\victor\Desktop\DAG-example\DAGExample\DAGLoader;C:\Users\victor\Desktop\DAG-example\DAGExample\DAGConstructor;C:\Users\victor\Desktop\DAG-example\DAGExample\utils;$(VC_IncludePath);$(WindowsSDK_IncludePath);C:\Users\victor\Desktop\DAG-example\DAGExample\DAG</IncludePath>
+    <IncludePath>DAGExample\ColorCompression;thirdparty\stb;thirdparty\cereal\include;thirdparty\glm;DAGExample\Voxelizer;DAGExample\glTFLoader;DAGExample\DAGTracer;DAGExample\DAGLoader;DAGExample\DAGConstructor;DAGExample\utils;$(VC_IncludePath);$(WindowsSDK_IncludePath);DAGExample\DAG</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -650,12 +658,12 @@
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>Level4</WarningLevel>
       <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GLM_FORCE_PURE;NDEBUG;_CONSOLE;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLM_FORCE_PURE;_CONSOLE;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

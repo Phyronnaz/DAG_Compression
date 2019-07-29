@@ -1,29 +1,36 @@
 #include <string>
 #include <vector>
-#include <glm/vec3.hpp>
-#include <DAG/DAG.h>
 
-namespace dag {
-namespace cerealization {
-using glm::vec3;
-namespace JSON {
-void save(const DAG& dag, const std::string& file);
-DAG load(const std::string& file);
+namespace cerealization
+{
+  namespace JSON
+  {
+    template<typename T>
+    void save(const T& obj, const std::string& file);
 
-template <typename T>
-void save_vec(const std::vector<T>& vec, const std::string& file);
-template <typename T>
-std::vector<T> load_vec(const std::string& file);
-}  // namespace JSON
+    template<typename T>
+    T load(const std::string& file);
 
-namespace bin {
-void save(const DAG& dag, const std::string& file);
-DAG load(const std::string& file);
+    template <typename T>
+    void save_vec(const std::vector<T>& vec, const std::string& file);
 
-template <typename T>
-void save_vec(const std::vector<T>& vec, const std::string& file);
-template <typename T>
-std::vector<T> load_vec(const std::string& file);
-}  // namespace bin
+    template <typename T>
+    std::vector<T> load_vec(const std::string& file);
+  }  // namespace JSON
+
+  namespace bin
+  {
+    template<typename T>
+    void save(const T& obj, const std::string& file);
+
+    template<typename T>
+    T load(const std::string& file);
+
+    template <typename T>
+    void save_vec(const std::vector<T>& vec, const std::string& file);
+
+    template <typename T>
+    std::vector<T> load_vec(const std::string& file);
+  }  // namespace bin
 }  // namespace cerealization
-}  // namespace dag
+

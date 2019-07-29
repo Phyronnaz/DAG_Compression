@@ -11,20 +11,23 @@
 #include <bitset>
 #include <limits>
 
+#define DECODE_COMPRESSED
+
 template <typename T>
 unsigned popcnt_safe(T v) {
 	return static_cast<unsigned>(std::bitset<std::numeric_limits<T>::digits>(v).count());
 }
 
-std::vector<uint32_t> upload_to_gpu(dag::DAG &dag)
+void upload_to_gpu(dag::DAG &dag)
 {
 	std::vector<uint32_t> dag_array;
 	std::vector<uint32_t> lvl_offsets;
-	uint32_t ctr{0};
+	std::size_t ctr{0};
 	for (const auto &lvl : dag.m_data) 
 	{
-		lvl_offsets.push_back(ctr);
-		ctr += (uint32_t)lvl.size();
+		assert(ctr < std::numeric_limits<uint32_t>::max());
+		lvl_offsets.push_back(uint32_t(ctr));
+		ctr += lvl.size();
 	}
 	dag_array.reserve(ctr);
 	auto tmp_dag = dag.m_data;
@@ -62,7 +65,6 @@ std::vector<uint32_t> upload_to_gpu(dag::DAG &dag)
 		cudaMalloc(&dag.d_enclosed_leaves, dag.m_enclosed_leaves.size() * sizeof(uint32_t));
 		cudaMemcpy(dag.d_enclosed_leaves,  dag.m_enclosed_leaves.data(), dag.m_enclosed_leaves.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
 	}
-	return dag_array;
 }
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -168,7 +170,7 @@ void DAGTracer::resize(uint32_t width, uint32_t height)
 __host__ __device__ uint8_t getNextChild(uint8_t child_order, uint8_t testmask, uint8_t childmask)
 {
 	for (int i = 0; i < 8; i++) {
-		uint8_t child_in_order = i ^ child_order;
+		uint8_t child_in_order = uint8_t(i ^ child_order);
 		bool child_exists = (childmask & (1 << child_in_order)) != 0;
 		bool child_is_taken = (~testmask & (1 << child_in_order)) != 0;
 		if (child_exists && !child_is_taken) return child_in_order;
@@ -190,7 +192,7 @@ uint8_t *  DAGTracer::calculateNextChildLookupTable()
 		for (uint32_t childmask = 0; childmask < 256; childmask++) {
 			for (uint32_t testmask = 0; testmask < 256; testmask++) {
 				lut[child_order * (256 * 256) + childmask * 256 + testmask] =
-					getNextChild(child_order, testmask, childmask); 
+					getNextChild((uint8_t)child_order, uint8_t(testmask), (uint8_t)childmask);
 			}
 		}
 	}
@@ -520,6 +522,9 @@ color_lookup_kernel_morton(
 	cudaSurfaceObject_t output_image,
 	bool all_colors,
 	int stop_level
+#ifdef DECODE_COMPRESSED
+  ,const ColorData color_data
+#endif
 ) 
 {
 	///////////////////////////////////////////////////////////////////////////
@@ -530,8 +535,8 @@ color_lookup_kernel_morton(
 
 	uint32_t color = 0x0000FF;
 	uint3 path = make_uint3(surf2Dread<uint4>(path_buffer, coord.x * sizeof(uint4), coord.y));
-	uint32_t nof_leaves = 0;
-	uint32_t final_color_idx = 0;
+	uint64_t nof_leaves = 0;
+	uint64_t final_color_idx = 0;
 	if (path != make_uint3(0, 0, 0)) {
 		uint32_t level = 0;
 		uint32_t node_index = 0;
@@ -662,8 +667,131 @@ color_lookup_kernel_morton(
 			node_offset = __popc(child_mask & ((1 << child_idx) - 1));
 			node_index = dag[node_index + 1 + node_offset];
 		}
+#ifdef DECODE_COMPRESSED
+    constexpr uint32_t colors_per_macro_block = 16 * 1024;
+    constexpr uint32_t voxel_index_mask = colors_per_macro_block - 1;
+    constexpr uint32_t header_size = 1;
+    const uint32_t macro_block_count = (color_data.nof_colors + colors_per_macro_block - 1) / colors_per_macro_block;
+#define block_idx_macro (uint32_t)color_data.d_macro_w_offset[2 * macro_block_idx + 0]
+#define w_bptr_macro color_data.d_macro_w_offset[2 * macro_block_idx + 1]
+    int position;
 
+    uint32_t lowerbound;
+    uint32_t upperbound;
+    const uint32_t local_color_idx = final_color_idx % colors_per_macro_block;
+    auto block_start_color = [](const uint32_t header)
+    {
+      return header & voxel_index_mask;
+    };
+
+    auto w_local = [](const uint32_t header)
+    {
+      return header >> 16;
+    };
+
+    auto get_bpw = [w_local](const uint32_t header)
+    {
+      return w_local(header) < UINT16_MAX ?
+        ((header >> 14) & 0x3) + 1 :
+        0;
+    };
+
+    const uint32_t macro_block_idx = final_color_idx / colors_per_macro_block;
+    lowerbound = block_idx_macro;
+    upperbound = (macro_block_idx < macro_block_count - 1) ?
+      color_data.d_macro_w_offset[2 * macro_block_idx + 2] - 1 :
+      color_data.nof_blocks - 1;
+
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Binary search through headers to find the block containing my node
+    ///////////////////////////////////////////////////////////////////////////
+    uint32_t header0;
+    {
+      position = (lowerbound + upperbound) / 2;
+
+      header0 = color_data.d_block_headers[position * header_size];
+      while (block_start_color(header0) != local_color_idx && (lowerbound <= upperbound))
+      {
+        if (block_start_color(header0) > local_color_idx)
+        {
+          upperbound = position - 1;
+        }
+        else
+        {
+          lowerbound = position + 1;
+        }
+
+        position = (lowerbound + upperbound) / 2;
+        header0 = color_data.d_block_headers[position * header_size];
+      }
+    }
+
+    ///////////////////////////////////////////////////////////////////////////
+    // Cache header1
+    ///////////////////////////////////////////////////////////////////////////
+    const uint32_t header1 = ((uint32_t*)color_data.d_block_colors)[position];
+
+    auto get_mincolor = [&](const unsigned bpw, const uint32_t header)
+    {
+      if (bpw > 0)
+      {
+        return rgb565_to_float3(header & 0xFFFF);
+      }
+      else
+      {
+        return rgb101210_to_float3(header);
+      }
+    };
+
+    auto get_maxcolor = [&](const unsigned bpw, const uint32_t header)
+    {
+      return rgb565_to_float3((header >> 16) & 0xFFFF);
+    };
+
+    const unsigned bpw = get_bpw(header0);
+    const uint32_t block_weight_offset = (local_color_idx - block_start_color(header0)) * bpw;
+    const uint64_t weight_idx = w_bptr_macro + w_local(header0) + block_weight_offset;
+    auto extract_bits = [](const int bits, const uint32_t * array, const uint64_t &bitptr)
+    {
+      uint32_t val = 0;
+      if (bits == 0) return val;
+      uint32_t ptr_word = bitptr / 32ull;
+      uint32_t ptr_bit = bitptr % 32ull;
+      int bits_left = 32 - ptr_bit;
+      // Need to be careful not to try to shift >= 32 steps (undefined)
+      uint32_t upper_mask = (bits_left == 32) ? 0xFFFFFFFFu : (~(0xFFFFFFFFu << bits_left));
+      if (bits_left >= bits)
+      {
+        val = upper_mask & array[ptr_word];
+        val >>= (bits_left - bits);
+      }
+      else
+      {
+        val = (upper_mask & array[ptr_word]) << (bits - bits_left);
+        val |= array[ptr_word + 1] >> (32 - (bits - bits_left));
+      }
+      return val;
+    };
+    const uint32_t weight = extract_bits(bpw, color_data.d_weights, weight_idx);
+
+    float3 decompressed_color = get_mincolor(bpw, header1);
+    if (bpw != 0)
+    {
+      decompressed_color = decompressed_color + (weight / float((1 << bpw) - 1)) * (get_maxcolor(bpw, header1) - decompressed_color);
+    }
+
+    //const float t = float(final_color_idx) / pow(2.0f, 32.0f);
+    //const float t = float(macro_block_idx) / float(macro_block_count);
+    //const float t = final_color_idx > (1ull << 31) ? 1.0 : 0.5;
+    //const float t = float(local_color_idx) / float(colors_per_macro_block);
+    //decompressed_color = decompressed_color * t;
+    color = float3_to_rgb888(decompressed_color);
+    //color = float3_to_rgb888(make_float3(t));
+
+#else
 		color = dag_color[final_color_idx];
+#endif // DECODE_COMPRESSED
 	}
 	surf2Dwrite(color, output_image, (int)sizeof(uint32_t)*coord.x, coord.y, cudaBoundaryModeClamp);
 }
@@ -764,6 +892,9 @@ void DAGTracer::resolve_colors(const dag::DAG &dag, int color_lookup_level)
 			m_color_buffer.m_cuda_surface_object,
 			dag.colors_in_all_nodes,
 			dag.colors_in_all_nodes ? color_lookup_level : dag.nofGeometryLevels()
+#ifdef DECODE_COMPRESSED
+    , m_compressed_colors
+#endif
 		);
 	m_color_buffer.unmapSurfaceObject(); 
 	m_path_buffer.unmapSurfaceObject(); 

@@ -177,6 +177,7 @@ __global__ void create_dag_nodes_kernel(
 void DAGConstructor::impl::build_parent_level(int lvl, int bottomLevel) {
 	dim3 blockDim = dim3(256);
 	dim3 gridDim = dim3((m_parent_svo_size +  blockDim.x - 1)/ blockDim.x);
+	assert(m_child_svo_size < std::numeric_limits<int>::max());
 	build_parent_level_kernel<<<gridDim, blockDim>>>(
 		parent_svo_nodes.data().get(),
 		parent_svo_idx.data().get(),
@@ -186,7 +187,7 @@ void DAGConstructor::impl::build_parent_level(int lvl, int bottomLevel) {
 		child_sort_key.data().get(),
 		parent_sort_key.data().get(),
 		m_parent_svo_size,
-		m_child_svo_size,
+		int(m_child_svo_size),
 		lvl,
 		bottomLevel
 		);
@@ -302,7 +303,8 @@ thrust::device_vector<uint32_t> DAGConstructor::impl::initDag(int *child_level_s
 	// Not used in first pass
 	*child_level_start_offset  = child_start_offset;
 	// Make room for a copied root node
-	*parent_level_start_offset = child_start_offset + 2 * num_unique;
+	assert(child_start_offset + 2 * num_unique < std::numeric_limits<int>::max());
+	*parent_level_start_offset = int(child_start_offset + 2 * num_unique);
 	return result;
 }
 
@@ -386,7 +388,7 @@ DAGConstructor::impl::buildDAG(
 			// Copy unique parent paths and their children indexes
 			{
 				auto out_iterator = IdentifyParents::OutBegin(first_child_pos.begin(), parent_paths.begin());
-				m_parent_svo_size = thrust::distance(
+				auto result = thrust::distance(
 					out_iterator, 
 					thrust::unique_copy(
 						IdentifyParents::InBegin(path.begin()), 
@@ -395,6 +397,8 @@ DAGConstructor::impl::buildDAG(
 						IdentifyParents::equal_to()
 					)
 				);
+				assert(result < std::numeric_limits<int>::max());
+				m_parent_svo_size = int(result);
 			}
 
 			// (1)
@@ -406,7 +410,8 @@ DAGConstructor::impl::buildDAG(
 				auto first_child_pos_second = first_child_pos.begin()  + 1;
 				auto parent_node_size_back  = parent_node_size.begin() + m_parent_svo_size-1;
 				thrust::transform(first_child_pos_second, first_child_pos_end, first_child_pos.begin(), parent_node_size.begin(), _1 - _2 + 1);
-				*parent_node_size_back = m_child_svo_size - (*first_child_pos_back) + 1;
+				assert(m_child_svo_size - (*first_child_pos_back) + 1 < std::numeric_limits<uint32_t>::max());
+				*parent_node_size_back = uint32_t(m_child_svo_size - (*first_child_pos_back) + 1);
 			}
 			// (2)
 			// Figure out index offset of these nodes

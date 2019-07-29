@@ -10,7 +10,18 @@
 ///////////////////////////////////////////////////////////////////////////
 // Only need this right now. Dag should be on GPU when built. 
 ///////////////////////////////////////////////////////////////////////////
-std::vector<uint32_t> upload_to_gpu(dag::DAG &dag);
+void upload_to_gpu(dag::DAG &dag);
+
+struct ColorData {
+  uint64_t *d_macro_w_offset;
+  uint32_t *d_block_headers;
+  uint8_t *d_block_colors;
+  uint32_t *d_weights;
+  uint64_t nof_blocks;
+  uint32_t bits_per_weight;
+  uint64_t nof_colors;
+};
+
 
 namespace chag{
 		class view;
@@ -26,6 +37,8 @@ public:
 	CUDAGLInteropSurface m_color_buffer; 
 	CUDAGLInteropSurface m_path_buffer;
 	CUDAGLInteropSurface m_depth_buffer;
+
+  ColorData m_compressed_colors;
 
 	uint32_t m_width;
 	uint32_t m_height; 

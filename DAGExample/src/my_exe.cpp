@@ -1,7 +1,6 @@
 #include <algorithm>
 #include <chrono>
 #include <iostream>
-#include <fstream>
 #include <numeric>
 #include <string>
 #include <stack>
@@ -11,11 +10,13 @@
 #include <glm/gtc/type_ptr.hpp>
 
 #include "DAG/DAG.h"
+#include "DAGLoader/DAGLoader.h"
 #include "DAGTracer/DAGTracer.h"
 #include "utils/view.h"
 
 #include "glTFLoader/glTFLoader.h"
 #include "voxelize_and_merge.h"
+#include "ColorCompression/ours_varbit.h"
 
 using glm::ivec2;
 using glm::vec2;
@@ -187,76 +188,110 @@ struct AppState {
 	}
 };
 
+constexpr bool load_cached{ true };
+constexpr bool load_compressed{ true };
+
+const char* dag_file              = R"(cache\dag16k.bin)";
+const char* raw_color_file        = R"(cache\raw16k.bin)";
+const char* compressed_color_file = R"(cache\compressed16k.bin)";
+
 int main(int argc, char *argv[]) {
-	init();
+  init();
 
-	constexpr int dag_resolution{1 << 13};
-	auto dag = DAG_from_scene(dag_resolution, R"(assets\EpicCitadel\glTF\)", "EpicCitadel.gltf");
-	if (dag)
-	{
-		struct MyHeader
-		{
-			float MinX;
-			float MinY;
-			float MinZ;
-			float MaxX;
-			float MaxY;
-			float MaxZ;
-			uint32_t levels;
-			uint32_t topLevels;
-			uint32_t numNodes;
-			uint32_t numEnclosedLeaves;
-			uint32_t numColors;
-		};
-		auto nodes = upload_to_gpu(*dag);
-		MyHeader myHeader{
-			dag->m_aabb.min.r, dag->m_aabb.min.g, dag->m_aabb.min.b,
-			dag->m_aabb.max.r, dag->m_aabb.max.g, dag->m_aabb.max.b,
-			dag->m_levels,
-			dag->m_top_levels,
-			nodes.size(),
-			dag->m_enclosed_leaves.size(),
-			dag->m_base_colors.size()
-		};
-		std::ofstream of("result.bin", std::ios::binary);
-		of.write((char*)&myHeader, sizeof(MyHeader));
-		of.write((char*)nodes.data(), myHeader.numNodes * sizeof(uint32_t));
-		of.write((char*)dag->m_enclosed_leaves.data(), myHeader.numEnclosedLeaves * sizeof(uint32_t));
-		of.write((char*)dag->m_base_colors.data(), myHeader.numColors * sizeof(uint32_t));
-		of.close();
-	}
-	//dag->calculateColorForAllNodes();
-	DAGTracer dag_tracer;
-	dag_tracer.resize(screen_dim.x, screen_dim.y);
+  //std::vector<uint32_t> a{ 1, 2, 3, 4, 5 };
+  //cerealization::bin::save_vec(a, R"(cache\kekekek.bin)");
+  //a = cerealization::bin::load_vec<uint32_t>(R"(cache\kekekek.bin)");
+  //exit(0);
 
-	if(dag)
-	{
-		upload_to_gpu(*dag);
-		AppState app;
-		app.camera.lookAt(vec3{0.0f, 1.0f, 0.0f}, vec3{0.0f, 0.0f, 0.0f});
-		while (app.loop) {
-			app.frame_timer.start();
-			app.handle_events();
+	constexpr int dag_resolution{4096*2*2};
+  //constexpr int dag_resolution{512};
+  std::optional<dag::DAG> dag;
+  ours_varbit::OursData compressed_color;
 
-			const int color_lookup_lvl = dag->nofGeometryLevels();
-			dag_tracer.resolve_paths(*dag, app.camera, color_lookup_lvl);
-			dag_tracer.resolve_colors(*dag, color_lookup_lvl);
+  if (load_cached)
+  {
+    dag = cerealization::bin::load<dag::DAG>(dag_file);
+  }
+  else
+  {
+    dag = DAG_from_scene(dag_resolution, R"(assets\Sponza\glTF\)", "Sponza.gltf");
+  //dag = DAG_from_scene(dag_resolution, R"(assets\FlightHelmet\)", "FlightHelmetFinal.gltf");
+  }
+  if (!dag)
+  {
+    std::cout << "Could not construct dag, assert file path.";
+  }
+  else
+  {
+    if (!load_cached)
+    {
+      cerealization::bin::save(*dag, dag_file);
+      //cerealization::bin::save_vec(dag->m_base_colors, R"(cache\colors.bin)");
+      write_to_disc(raw_color_file, dag->m_base_colors);
+    }
 
-			glUseProgram(copy_shader);
-			glActiveTexture(GL_TEXTURE0);
-			glBindTexture(GL_TEXTURE_2D, dag_tracer.m_color_buffer.m_gl_idx);
-			glUniform1i(renderbuffer_uniform, 0);
-			glActiveTexture(GL_TEXTURE0);
-			glDrawArrays(GL_TRIANGLES, 0, 3);
+    if (load_compressed)
+    {
+      compressed_color = cerealization::bin::load<ours_varbit::OursData>(compressed_color_file);
+    }
+    else
+    {
+      disc_vector<uint32_t> da{ raw_color_file, macro_block_size };
+      compressed_color = ours_varbit::compressColors_alternative_par(std::move(da), 0.025f, ours_varbit::ColorLayout::RGB_5_6_5);
+      cerealization::bin::save(compressed_color, compressed_color_file);
+    }
 
-			SDL_GL_SwapWindow(mainWindow);
-			app.frame_timer.end();
-		}
-	}
+    
+    ours_varbit::upload_to_gpu(compressed_color);
 
-	SDL_GL_DeleteContext(mainContext);
-	SDL_DestroyWindow(mainWindow);
-	SDL_Quit();
+    DAGTracer dag_tracer;
+    dag_tracer.resize(screen_dim.x, screen_dim.y);
+
+    sizeof(DAGTracer);
+    sizeof(AppState);
+    sizeof(ColorData);
+    sizeof(disc_vector<uint32_t>);
+    sizeof(dag::DAG);
+    ColorData tmp;
+    tmp.bits_per_weight = compressed_color.bits_per_weight;
+    tmp.nof_blocks = compressed_color.nof_blocks;
+    tmp.nof_colors = compressed_color.nof_colors;
+    tmp.d_block_colors = compressed_color.d_block_colors;
+    tmp.d_block_headers = compressed_color.d_block_headers;
+    tmp.d_macro_w_offset = compressed_color.d_macro_w_offset;
+    tmp.d_weights = compressed_color.d_weights;
+    dag_tracer.m_compressed_colors = tmp;
+    
+
+
+    upload_to_gpu(*dag);
+    AppState app;
+    app.camera.lookAt(vec3{ 0.0f, 1.0f, 0.0f }, vec3{ 0.0f, 0.0f, 0.0f });
+    while (app.loop)
+    {
+      app.frame_timer.start();
+      app.handle_events();
+
+      const int color_lookup_lvl = dag->nofGeometryLevels();
+      dag_tracer.resolve_paths(*dag, app.camera, color_lookup_lvl);
+      dag_tracer.resolve_colors(*dag, color_lookup_lvl);
+
+      glViewport(0, 0, screen_dim.x, screen_dim.y);
+      glUseProgram(copy_shader);
+      glActiveTexture(GL_TEXTURE0);
+      glBindTexture(GL_TEXTURE_2D, dag_tracer.m_color_buffer.m_gl_idx);
+      glUniform1i(renderbuffer_uniform, 0);
+      glActiveTexture(GL_TEXTURE0);
+      glDrawArrays(GL_TRIANGLES, 0, 3);
+
+      SDL_GL_SwapWindow(mainWindow);
+      app.frame_timer.end();
+    }
+
+    SDL_GL_DeleteContext(mainContext);
+    SDL_DestroyWindow(mainWindow);
+    SDL_Quit();
+  }
 	return 0;
 }
 

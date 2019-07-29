@@ -357,6 +357,10 @@
     <ClInclude Include="thirdparty\stb\stb\stb_truetype.h" />
     <ClInclude Include="thirdparty\stb\stb\stb_voxel_render.h" />
     <ClInclude Include="thirdparty\stb\stb\stretchy_buffer.h" />
+    <ClInclude Include="DAGExample\ColorCompression\ColorCompression\ours.h" />
+    <ClInclude Include="DAGExample\ColorCompression\ColorCompression\ours_varbit.h" />
+    <ClInclude Include="DAGExample\ColorCompression\ColorCompression\svd.h" />
+    <ClInclude Include="DAGExample\ColorCompression\ColorCompression\BlockBuild.h" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DAGExample\DAG\DAG\DAG.cpp" />
@@ -372,6 +376,9 @@
     <ClCompile Include="DAGExample\Voxelizer\Voxelizer\Voxelizer.cpp" />
     <ClCompile Include="thirdparty\glm\glm\detail\glm.cpp" />
     <ClCompile Include="thirdparty\stb\stb\stb_vorbis.c" />
+    <ClCompile Include="DAGExample\ColorCompression\ColorCompression\ours_varbit.cpp" />
+    <ClCompile Include="DAGExample\ColorCompression\ColorCompression\svd.cpp" />
+    <ClCompile Include="DAGExample\ColorCompression\ColorCompression\ours.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="thirdparty\cereal\include\cereal\external\rapidxml\manual.html" />
@@ -511,5 +518,6 @@
   <ItemGroup>
     <CudaCompile Include="DAGExample\DAGTracer\DAGTracer\DAGTracer.cu" />
     <CudaCompile Include="DAGExample\DAGConstructor\DAGConstructor\DAGConstructor.cu" />
+    <CudaCompile Include="DAGExample\ColorCompression\ColorCompression\ours.cu" />
   </ItemGroup>
 </Project>

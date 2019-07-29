@@ -16,6 +16,20 @@ uint32_t mortonEncode32(uint32_t x, uint32_t y, uint32_t z) {
 	return splitBy3_32(x) << 2 | splitBy3_32(y) << 1 | splitBy3_32(z);
 };
 
+vec4 SRGBtoLINEAR(vec4 srgbIn)
+{
+	vec3 bLess = step(vec3(0.04045),srgbIn.xyz);
+	vec3 linOut = mix( srgbIn.xyz/vec3(12.92), pow((srgbIn.xyz+vec3(0.055))/vec3(1.055),vec3(2.4)), bLess );
+	return vec4(linOut,srgbIn.w);
+}
+
+vec4 LINEARtoSRGB(vec4 linIn)
+{
+	vec3 bLess = step(vec3(0.0031308), linIn.xyz);
+	vec3 srgbOut = mix( linIn.xyz * vec3(12.92), vec3(1.055)*pow(linIn.xyz,vec3(1.0/2.4)) - vec3(0.055), bLess );
+	return vec4(srgbOut, linIn.w);
+}
+
 void swap(inout int a[5], int i, int j) {
 	int tmp = a[i];
 	a[i] = a[j];
@@ -98,7 +112,7 @@ in vec3 fs_position1;
 in vec3 fs_position2;
 in vec3 fs_normal;
 in vec3 barycoords; 
-flat in vec3 fs_gnormal; 
+flat in vec3 fs_gnormal;
 
 layout ( binding = 0 ) uniform atomic_uint frag_count;
 layout(binding = 0, std430) restrict coherent buffer item_buffer_block0{ uint32_t position_ssbo[]; };
@@ -119,7 +133,7 @@ void main() {
 	float diff = 0.5 + max(0, dot(fs_normal, normalize(vec3(1, 1, 1))));
 
 	base_color.rgb *= diff;
-
+	
 	vec3 subvoxel_pos = vec3((gl_FragCoord.x), 
 							(gl_FragCoord.y), 
 							(gl_FragCoord.z * grid_dim)); 
@@ -135,7 +149,7 @@ void main() {
 		clamp(int(subvoxel_pos.z - dzdx - dzdy), 0, grid_dim-1)
 	};
 	sort(apa);
-	for(int i = 0; i<5; ++i){ 
+	for(int i = 0; i<1; ++i){ 
 		if(i == 0 || apa[i] != apa[i-1]){
 			uvec3 subvoxel_coord2 = uvec3(clamp(uvec2(subvoxel_pos.xy), uvec2(0), uvec2(grid_dim-1)), uint(apa[i]));
 			if      (axis_id == 1) { subvoxel_coord2.xyz = subvoxel_coord2.zyx; }
