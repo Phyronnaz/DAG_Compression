@@ -2,6 +2,48 @@
 #include <stdint.h>
 #include "../CudaHelpers.h" //FIXME: Proper search paths
 #include <DAG/DAG.h>
+#include <fstream>
+#include <iosfwd>
+
+class FileWriter
+{
+public:
+	explicit FileWriter(const std::string& path)
+		: os(path, std::ios::binary)
+	{
+	}
+	~FileWriter()
+	{
+		assert(os.good());
+		os.close();
+	}
+	
+	inline void write(const void* data, size_t num)
+	{
+		os.write(reinterpret_cast<const char*>(data), std::streamsize(num));
+	}
+	inline void write(uint32_t data)
+	{
+		write(&data, sizeof(uint32_t));
+	}
+	inline void write(uint64_t data)
+	{
+		write(&data, sizeof(uint64_t));
+	}
+	inline void write(double data)
+	{
+		write(&data, sizeof(double));
+	}
+	template<typename T>
+	inline void write(const std::vector<T>& array)
+	{
+		write(uint64_t(array.size()));
+		write(array.data(), array.size() * sizeof(T));
+	}
+
+private:
+	std::ofstream os;
+};
 
 #define MAX_LEVELS 17
 #define IN_ORDER_TRAVERSAL 1

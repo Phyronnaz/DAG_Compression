@@ -9,7 +9,7 @@
 #include <utils/view.h>
 
 #include <bitset>
-#include <limits>
+#include <limits>	
 
 #define DECODE_COMPRESSED
 
@@ -50,6 +50,20 @@ void upload_to_gpu(dag::DAG &dag)
 	// Copy DAG to array
 	for (const auto &lvl : tmp_dag) { dag_array.insert(dag_array.end(), lvl.begin(), lvl.end()); }
 
+
+	{
+		FileWriter writer("cache/result.basic_dag.dag.bin");
+		writer.write(double(dag.m_aabb.min.x));
+		writer.write(double(dag.m_aabb.min.y));
+		writer.write(double(dag.m_aabb.min.z));
+		writer.write(double(dag.m_aabb.max.x));
+		writer.write(double(dag.m_aabb.max.y));
+		writer.write(double(dag.m_aabb.max.z));
+		
+		writer.write(dag.m_levels + 2);
+		writer.write(dag_array);
+		printf("wrote dag\n");
+	}
 
 	if (dag.d_data)            { cudaFree(dag.d_data);            dag.d_data            = nullptr;}
 	if (dag.d_color_data)      { cudaFree(dag.d_color_data);      dag.d_color_data      = nullptr;}
@@ -788,6 +802,21 @@ color_lookup_kernel_morton(
     //decompressed_color = decompressed_color * t;
     color = float3_to_rgb888(decompressed_color);
     //color = float3_to_rgb888(make_float3(t));
+
+	//const auto murmurhash = [](uint64_t h)
+	//{
+	//	h ^= h >> 33;
+	//	h *= 0xff51afd7ed558ccd;
+	//	h ^= h >> 33;
+	//	h *= 0xc4ceb9fe1a85ec53;
+	//	h ^= h >> 33;
+	//	return h;
+	//};
+	//	  lowerbound = block_idx_macro;
+ //   upperbound = (macro_block_idx < macro_block_count - 1) ?
+ //     color_data.d_macro_w_offset[2 * macro_block_idx + 2] - 1 :
+ //     color_data.nof_blocks - 1;
+	//color = murmurhash(weight);
 
 #else
 		color = dag_color[final_color_idx];

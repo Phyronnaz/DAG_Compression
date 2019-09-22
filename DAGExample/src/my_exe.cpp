@@ -188,110 +188,135 @@ struct AppState {
 	}
 };
 
-constexpr bool load_cached{ true };
-constexpr bool load_compressed{ true };
+constexpr bool load_cached{ false };
+constexpr bool load_compressed{ false };
 
 const char* dag_file              = R"(cache\dag16k.bin)";
 const char* raw_color_file        = R"(cache\raw16k.bin)";
 const char* compressed_color_file = R"(cache\compressed16k.bin)";
 
-int main(int argc, char *argv[]) {
-  init();
+int main(int argc, char* argv[]) {
+	init();
 
-  //std::vector<uint32_t> a{ 1, 2, 3, 4, 5 };
-  //cerealization::bin::save_vec(a, R"(cache\kekekek.bin)");
-  //a = cerealization::bin::load_vec<uint32_t>(R"(cache\kekekek.bin)");
-  //exit(0);
+	//std::vector<uint32_t> a{ 1, 2, 3, 4, 5 };
+	//cerealization::bin::save_vec(a, R"(cache\kekekek.bin)");
+	//a = cerealization::bin::load_vec<uint32_t>(R"(cache\kekekek.bin)");
+	//exit(0);
 
-	constexpr int dag_resolution{4096*2*2};
-  //constexpr int dag_resolution{512};
-  std::optional<dag::DAG> dag;
-  ours_varbit::OursData compressed_color;
+	constexpr int dag_resolution{ 2048 };
+	//constexpr int dag_resolution{512};
+	std::optional<dag::DAG> dag;
+	ours_varbit::OursData compressed_color;
 
-  if (load_cached)
-  {
-    dag = cerealization::bin::load<dag::DAG>(dag_file);
-  }
-  else
-  {
-    dag = DAG_from_scene(dag_resolution, R"(assets\Sponza\glTF\)", "Sponza.gltf");
-  //dag = DAG_from_scene(dag_resolution, R"(assets\FlightHelmet\)", "FlightHelmetFinal.gltf");
-  }
-  if (!dag)
-  {
-    std::cout << "Could not construct dag, assert file path.";
-  }
-  else
-  {
-    if (!load_cached)
-    {
-      cerealization::bin::save(*dag, dag_file);
-      //cerealization::bin::save_vec(dag->m_base_colors, R"(cache\colors.bin)");
-      write_to_disc(raw_color_file, dag->m_base_colors);
-    }
+	if (load_cached)
+	{
+		dag = cerealization::bin::load<dag::DAG>(dag_file);
+	}
+	else
+	{
+		dag = DAG_from_scene(dag_resolution, R"(assets\Sponza\glTF\)", "Sponza.gltf");
+		//dag = DAG_from_scene(dag_resolution, R"(assets\FlightHelmet\)", "FlightHelmetFinal.gltf");
+	}
+	if (!dag)
+	{
+		std::cout << "Could not construct dag, assert file path.";
+	}
+	else
+	{
+		if (!load_cached)
+		{
+			cerealization::bin::save(*dag, dag_file);
+			//cerealization::bin::save_vec(dag->m_base_colors, R"(cache\colors.bin)");
+			write_to_disc(raw_color_file, dag->m_base_colors);
+		}
 
-    if (load_compressed)
-    {
-      compressed_color = cerealization::bin::load<ours_varbit::OursData>(compressed_color_file);
-    }
-    else
-    {
-      disc_vector<uint32_t> da{ raw_color_file, macro_block_size };
-      compressed_color = ours_varbit::compressColors_alternative_par(std::move(da), 0.025f, ours_varbit::ColorLayout::RGB_5_6_5);
-      cerealization::bin::save(compressed_color, compressed_color_file);
-    }
+		if (load_compressed)
+		{
+			compressed_color = cerealization::bin::load<ours_varbit::OursData>(compressed_color_file);
+		}
+		else
+		{
+			disc_vector<uint32_t> da{ raw_color_file, macro_block_size };
+			compressed_color = ours_varbit::compressColors_alternative_par(std::move(da), 0.05f, ours_varbit::ColorLayout::RGB_5_6_5);
+			cerealization::bin::save(compressed_color, compressed_color_file);
+		}
+		if (!load_cached)
+		{
+			FileWriter writer("cache/result.basic_dag.uncompressed_colors.bin");
+			writer.write(dag->m_top_levels);
+			writer.write(dag->m_enclosed_leaves);
+			writer.write(dag->m_base_colors);
+			printf("wrote uncompressed colors\n");
+		}
+		{
+			FileWriter writer("cache/result.basic_dag.compressed_colors.variable.bin");
+			writer.write(dag->m_top_levels);
+			writer.write(dag->m_enclosed_leaves);
+			std::vector<uint64_t> blocks;
+			blocks.reserve(compressed_color.h_block_headers.size());
+			for (uint64_t index = 0; index < compressed_color.h_block_headers.size(); ++index)
+			{
+				uint64_t block = compressed_color.h_block_headers[index];
+				uint32_t colorbits = ((uint32_t*)compressed_color.h_block_colors.data())[index];
+				block |= uint64_t(colorbits) << 32;
+				blocks.push_back(block);
+			}
+			writer.write(compressed_color.h_weights);
+			writer.write(blocks);
+			writer.write(compressed_color.h_macro_w_offset);
+			printf("wrote compressed colors\n");
+		}
 
-    
-    ours_varbit::upload_to_gpu(compressed_color);
+		ours_varbit::upload_to_gpu(compressed_color);
 
-    DAGTracer dag_tracer;
-    dag_tracer.resize(screen_dim.x, screen_dim.y);
+		DAGTracer dag_tracer;
+		dag_tracer.resize(screen_dim.x, screen_dim.y);
 
-    sizeof(DAGTracer);
-    sizeof(AppState);
-    sizeof(ColorData);
-    sizeof(disc_vector<uint32_t>);
-    sizeof(dag::DAG);
-    ColorData tmp;
-    tmp.bits_per_weight = compressed_color.bits_per_weight;
-    tmp.nof_blocks = compressed_color.nof_blocks;
-    tmp.nof_colors = compressed_color.nof_colors;
-    tmp.d_block_colors = compressed_color.d_block_colors;
-    tmp.d_block_headers = compressed_color.d_block_headers;
-    tmp.d_macro_w_offset = compressed_color.d_macro_w_offset;
-    tmp.d_weights = compressed_color.d_weights;
-    dag_tracer.m_compressed_colors = tmp;
-    
+		sizeof(DAGTracer);
+		sizeof(AppState);
+		sizeof(ColorData);
+		sizeof(disc_vector<uint32_t>);
+		sizeof(dag::DAG);
+		ColorData tmp;
+		tmp.bits_per_weight = compressed_color.bits_per_weight;
+		tmp.nof_blocks = compressed_color.nof_blocks;
+		tmp.nof_colors = compressed_color.nof_colors;
+		tmp.d_block_colors = compressed_color.d_block_colors;
+		tmp.d_block_headers = compressed_color.d_block_headers;
+		tmp.d_macro_w_offset = compressed_color.d_macro_w_offset;
+		tmp.d_weights = compressed_color.d_weights;
+		dag_tracer.m_compressed_colors = tmp;
 
 
-    upload_to_gpu(*dag);
-    AppState app;
-    app.camera.lookAt(vec3{ 0.0f, 1.0f, 0.0f }, vec3{ 0.0f, 0.0f, 0.0f });
-    while (app.loop)
-    {
-      app.frame_timer.start();
-      app.handle_events();
 
-      const int color_lookup_lvl = dag->nofGeometryLevels();
-      dag_tracer.resolve_paths(*dag, app.camera, color_lookup_lvl);
-      dag_tracer.resolve_colors(*dag, color_lookup_lvl);
+		upload_to_gpu(*dag);
+		AppState app;
+		app.camera.lookAt(vec3{ 0.0f, 1.0f, 0.0f }, vec3{ 0.0f, 0.0f, 0.0f });
+		while (app.loop)
+		{
+			app.frame_timer.start();
+			app.handle_events();
 
-      glViewport(0, 0, screen_dim.x, screen_dim.y);
-      glUseProgram(copy_shader);
-      glActiveTexture(GL_TEXTURE0);
-      glBindTexture(GL_TEXTURE_2D, dag_tracer.m_color_buffer.m_gl_idx);
-      glUniform1i(renderbuffer_uniform, 0);
-      glActiveTexture(GL_TEXTURE0);
-      glDrawArrays(GL_TRIANGLES, 0, 3);
+			const int color_lookup_lvl = dag->nofGeometryLevels();
+			dag_tracer.resolve_paths(*dag, app.camera, color_lookup_lvl);
+			dag_tracer.resolve_colors(*dag, color_lookup_lvl);
 
-      SDL_GL_SwapWindow(mainWindow);
-      app.frame_timer.end();
-    }
+			glViewport(0, 0, screen_dim.x, screen_dim.y);
+			glUseProgram(copy_shader);
+			glActiveTexture(GL_TEXTURE0);
+			glBindTexture(GL_TEXTURE_2D, dag_tracer.m_color_buffer.m_gl_idx);
+			glUniform1i(renderbuffer_uniform, 0);
+			glActiveTexture(GL_TEXTURE0);
+			glDrawArrays(GL_TRIANGLES, 0, 3);
 
-    SDL_GL_DeleteContext(mainContext);
-    SDL_DestroyWindow(mainWindow);
-    SDL_Quit();
-  }
+			SDL_GL_SwapWindow(mainWindow);
+			app.frame_timer.end();
+		}
+
+		SDL_GL_DeleteContext(mainContext);
+		SDL_DestroyWindow(mainWindow);
+		SDL_Quit();
+	}
 	return 0;
 }
 
