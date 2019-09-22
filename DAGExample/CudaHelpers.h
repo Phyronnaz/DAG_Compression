@@ -4,7 +4,7 @@
 #include <GL/glew.h>
 #include <cuda_gl_interop.h>
 #include <cuda_runtime.h>
-
+#include <cassert>
 
 #ifdef __CUDACC__
 __device__ inline int getGlobalIdx_1D_1D() { return blockIdx.x * blockDim.x + threadIdx.x; }

@@ -74,18 +74,22 @@ struct Mesh {
 
 struct Material {
 	enum class AlphaMode { ALPHA_OPAQUE, ALPHA_MASK, ALPHA_BLEND };
-	enum class Type { METALLIC_ROUGHNESS, SPECULAR_GLOSSINESS };
+    enum class Type { METALLIC_ROUGHNESS, SPECULAR_GLOSSINESS };
+    struct pbrMetallicRoughness
+    {
+        GLuint baseColorTexture;
+        GLuint metallicRoughnessTexture;
+        float baseColorFactor[3];
+    };
+    struct pbrSpecularGlossiness
+    {
+        GLuint diffuseTexture;
+        GLuint specularGlossinessTexture;
+        float diffuseFactor[3];
+    };
 	union {
-		struct pbrMetallicRoughness {
-			GLuint baseColorTexture;
-			GLuint metallicRoughnessTexture;
-			float baseColorFactor[3];
-		} metallic_roughness;
-		struct pbrSpecularGlossiness {
-			GLuint diffuseTexture;
-			GLuint specularGlossinessTexture;
-			float diffuseFactor[3];
-		} specular_glossiness;
+		 pbrMetallicRoughness metallic_roughness;
+		 pbrSpecularGlossiness specular_glossiness;
 	};
 	GLuint normalTexture;
 	GLuint occlusionTexture;

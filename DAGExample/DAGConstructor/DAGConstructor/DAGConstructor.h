@@ -6,7 +6,6 @@
 #include <utils/Aabb.h>
 #include <vector>
 
-#include <intrin.h>
 #ifndef __CUDACC__
 #include "Merger.h"
 #endif

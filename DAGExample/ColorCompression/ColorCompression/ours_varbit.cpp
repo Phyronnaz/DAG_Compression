@@ -9,6 +9,7 @@
 #include <sstream>
 #include <iostream>
 #include <fstream>
+#include <tuple>
 
 #include <glm/glm.hpp>
 
@@ -808,7 +809,7 @@ namespace ours_varbit {
   };
 
   // Compress colors using CUDA.
-  tuple<CompressionInfo, OursData> CompressionState::compress()
+  std::tuple<CompressionInfo, OursData> CompressionState::compress()
   {
     CompressionInfo nfo;
     OursData ours_dat;
@@ -1466,7 +1467,7 @@ namespace ours_varbit {
     // NOTE: "auto*& d_vec" - We do **not** want a copy of the pointer.
     auto upload_vector = [](const auto& h_vec, auto*& d_vec)
     {
-      using T = decay<decltype(h_vec)>::type::value_type;
+      using T = typename decay<decltype(h_vec)>::type::value_type;
       if (d_vec)
       {
         cudaFree(d_vec);

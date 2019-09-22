@@ -10,6 +10,11 @@ unsigned popcnt_safe(T v) {
 	return static_cast<unsigned>(std::bitset<std::numeric_limits<T>::digits>(v).count());
 }
 
+#ifndef _MSC_VER
+unsigned int __popcnt(unsigned int in) {
+  int r = 0; asm ("popcnt %1,%0" : "=r"(r) : "r"(in)); return r;
+}
+#endif
 
 namespace dag {
 
@@ -202,7 +207,11 @@ void DAG::calculateColorForAllNodes() {
 			// There are children left to test in current node.
 			unsigned long next_child;
 			//_BitScanReverse(&next_child, curr_se.child_mask);
+#ifdef _MSC_VER
 			_BitScanForward(&next_child, curr_se.test_mask);
+#else
+			next_child = __builtin_ffs(curr_se.test_mask) - 1;
+#endif
 			curr_se.test_mask &= ~(1 << next_child);
 			uint32_t node_offset = __popcnt((curr_se.child_mask & 0xFF) & ((1 << next_child) - 1)) + 1;
 

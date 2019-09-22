@@ -6,6 +6,7 @@
 #include <sm_35_intrinsics.h>
 #include <vector_functions.h>
 #include <vector>
+#include <cfloat>
 #include "BlockBuild.h"
 
 float __device__ rand_lut[64] = {
@@ -358,13 +359,13 @@ __device__ float3 minmaxSingleCorrectedColor(const float3 &c, ColorLayout layout
 ///////////////////////////////////////////////////////////////////////
 // Get the "error" between two colors. Should be perceptually sane. 
 ///////////////////////////////////////////////////////////////////////
-__device__ __forceinline
+__device__ inline
 float3 minmax_correctred(const float3 &c)
 {
   return rgb888_to_float3(float3_to_rgb888(c));
 }
 
-__device__ __forceinline
+__device__ inline
 float getErrorSquared(const float3 & c1, const float3 & c2, bool minmax_correction)
 {
   const float3 err_vec = minmax_correction ?
@@ -376,7 +377,7 @@ float getErrorSquared(const float3 & c1, const float3 & c2, bool minmax_correcti
     err_vec.z * err_vec.z;
 };
 
-__device__ __forceinline
+__device__ inline
 float getError(const float3 & c1, const float3 & c2, bool minmax_correction)
 {
   return sqrt(getErrorSquared(c1, c2, minmax_correction));

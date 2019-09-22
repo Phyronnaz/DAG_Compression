@@ -24,6 +24,12 @@
 #include "../CudaHelpers.h" //FIXME: Proper search paths
 #include "../hash.h"        //FIXME: Proper search paths
 
+#ifndef _MSC_VER
+inline unsigned int __popcnt(unsigned int in) {
+  int r = 0; asm ("popcnt %1,%0" : "=r"(r) : "r"(in)); return r;
+}
+#endif
+
 uint32_t count_child_nodes(int lvl, int bottomlevel, uint32_t node_idx, std::vector<std::vector<uint32_t>> *dag) {
 	if (lvl == bottomlevel) {
 		auto a = __popcnt((*dag)[lvl][node_idx]);
@@ -322,7 +328,7 @@ using Iter = thrust::device_vector<uint32_t>::iterator;
 auto InBegin(Iter path){
 	return thrust::make_zip_iterator(
 		thrust::make_tuple(
-			thrust::make_counting_iterator(0ull),
+			thrust::make_counting_iterator(std::size_t(0ull)),
 			thrust::make_transform_iterator(path, thrust::placeholders::_1 >> 3)
 		)
 	);

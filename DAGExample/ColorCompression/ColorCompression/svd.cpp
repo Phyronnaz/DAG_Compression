@@ -2,6 +2,7 @@
 
 #include "math.h"
 #include <vector>
+#include <cstdio>
 //#include <linmath/linmath.h>
 
 #define MIN(x,y) ( (x) < (y) ? (x) : (y) )

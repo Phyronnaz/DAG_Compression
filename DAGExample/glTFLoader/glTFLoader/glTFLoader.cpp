@@ -45,7 +45,7 @@ GLuint readRGBA8888(const std::string &filename) {
 
 GLuint uploadBin(const std::string &file, GLsizeiptr count) {
 	// If count is zero, figure out file size.
-	std::ifstream binfile(file, std::ios::binary | ((count == 0) ? std::ios::ate : 0));
+	std::ifstream binfile(file, ((count == 0) ? (std::ios::binary | std::ios::ate) : std::ios::binary));
 	if (count == 0) {
 		GLsizeiptr count = binfile.tellg();
 		binfile.seekg(0);
