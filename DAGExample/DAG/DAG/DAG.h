@@ -5,6 +5,21 @@
 #include <vector>
 #include <utils/Aabb.h>
 
+#ifdef _MSC_VER
+#include <intrin.h>
+#endif
+
+inline unsigned int popcnt(unsigned int in)
+{
+#ifdef _MSC_VER
+	return __popcnt(in);
+#else
+	unsigned int r = 0;
+	asm("popcnt %1,%0" : "=r"(r) : "r"(in));
+	return r;
+#endif
+}
+
 struct float4;
 
 namespace dag {

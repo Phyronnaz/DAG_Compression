@@ -24,16 +24,10 @@
 #include "../CudaHelpers.h" //FIXME: Proper search paths
 #include "../hash.h"        //FIXME: Proper search paths
 
-#ifndef _MSC_VER
-inline unsigned int __popcnt(unsigned int in) {
-  int r = 0; asm ("popcnt %1,%0" : "=r"(r) : "r"(in)); return r;
-}
-#endif
-
 uint32_t count_child_nodes(int lvl, int bottomlevel, uint32_t node_idx, std::vector<std::vector<uint32_t>> *dag) {
 	if (lvl == bottomlevel) {
-		auto a = __popcnt((*dag)[lvl][node_idx]);
-		auto b = __popcnt((*dag)[lvl][node_idx + 1]);
+		auto a = popcnt((*dag)[lvl][node_idx]);
+		auto b = popcnt((*dag)[lvl][node_idx + 1]);
 		return a + b;
 	}
 	uint32_t n_children = 0;

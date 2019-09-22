@@ -10,12 +10,6 @@ unsigned popcnt_safe(T v) {
 	return static_cast<unsigned>(std::bitset<std::numeric_limits<T>::digits>(v).count());
 }
 
-#ifndef _MSC_VER
-unsigned int __popcnt(unsigned int in) {
-  int r = 0; asm ("popcnt %1,%0" : "=r"(r) : "r"(in)); return r;
-}
-#endif
-
 namespace dag {
 
 bool calculate_sizes(const int node_idx, const int level, const std::vector<uint32_t> &dag, const uint32_t &nof_levels,
@@ -213,7 +207,7 @@ void DAG::calculateColorForAllNodes() {
 			next_child = __builtin_ffs(curr_se.test_mask) - 1;
 #endif
 			curr_se.test_mask &= ~(1 << next_child);
-			uint32_t node_offset = __popcnt((curr_se.child_mask & 0xFF) & ((1 << next_child) - 1)) + 1;
+			uint32_t node_offset = popcnt((curr_se.child_mask & 0xFF) & ((1 << next_child) - 1)) + 1;
 
 			stack[stack_level] = curr_se;
 			stack_level += 1;
