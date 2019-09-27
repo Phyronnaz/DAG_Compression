@@ -430,8 +430,8 @@ __device__ inline float3x3 warpSum(float3x3 m) {
 
 template<bool minmaxcorrection, bool laberr>
 __global__ void scorefunction_gpu_warp(
-  int numColors,
-  int numBlocks,
+  size_t numColors,
+  size_t numBlocks,
   const float3 * colors,
   const BlockBuild * blocks,
   float * scores,
@@ -459,8 +459,8 @@ __global__ void scorefunction_gpu_warp(
     BlockBuild currblock = blocks[jobId];
     BlockBuild nextblock = blocks[jobId + 1];
 
-    int start = currblock.blockStart;
-    int range = currblock.blockLength + (finalEval ? 0 : nextblock.blockLength);
+    size_t start = currblock.blockStart;
+    size_t range = currblock.blockLength + (finalEval ? 0 : nextblock.blockLength);
     // start + range <= numColors
     range = min(range, numColors - start);
 
@@ -486,7 +486,7 @@ __global__ void scorefunction_gpu_warp(
         {
           o = make_float3(0.0f, 0.0f, 0.0f);
           float3 error = o;
-          for (int i = start + laneId; i < start + range; i += 32)
+          for (size_t i = start + laneId; i < start + range; i += 32)
           {
             o = compensatedSum(colors[i], o, error);
           }
@@ -497,7 +497,7 @@ __global__ void scorefunction_gpu_warp(
           float3 zeros = make_float3(0.0f, 0.0f, 0.0f);
           float3x3 scatterMatrix = make_float3x3(zeros, zeros, zeros);
 
-          for (int i = start + laneId; i < start + range; i += 32)
+          for (size_t i = start + laneId; i < start + range; i += 32)
           {
             float3 relpos = colors[i] - o;
             float3x3 outerProd =
@@ -551,7 +551,7 @@ __global__ void scorefunction_gpu_warp(
 
         float mindist = FLT_MAX;
         float maxdist = -FLT_MAX;
-        for (int i = start + laneId; i < start + range; i += 32)
+        for (size_t i = start + laneId; i < start + range; i += 32)
         {
           float distance = dot(colors[i] - o, d);
           mindist = min(mindist, distance);
@@ -574,7 +574,7 @@ __global__ void scorefunction_gpu_warp(
     {
       float3 o = make_float3(0.0f, 0.0f, 0.0f);
       float3 error = o;
-      for (int i = start + laneId; i < start + range; i += 32)
+      for (size_t i = start + laneId; i < start + range; i += 32)
       {
         o = compensatedSum(colors[i], o, error);
       }
@@ -626,7 +626,7 @@ __global__ void scorefunction_gpu_warp(
         const float3 & B = maxpoint;
         float colorRangeInvSq = 1.0f / dot(B - A, B - A);
 
-        for (int i = start + laneId; i < start + range; i += 32)
+        for (size_t i = start + laneId; i < start + range; i += 32)
         {
           const float3 & p = colors[i];
           float distance = 0.0f;
@@ -662,7 +662,7 @@ __global__ void scorefunction_gpu_warp(
     else
     {
       float msesum = 0.0f;
-      for (int i = start + laneId; i < start + range; i += 32)
+      for (size_t i = start + laneId; i < start + range; i += 32)
       {
         const float3 & p = colors[i];
         float3 interpolated_color = minpoint;
@@ -781,8 +781,8 @@ void scores_gpu(
     if (minmaxcorrection)
     {
       scorefunction_gpu_warp<true, false> << <gridDim, blockDim >> > (
-        int(g_numColors),
-        int(blocks.size()),
+        g_numColors,
+        blocks.size(),
         g_dev_colors,
         pBlocks,
         pScores,

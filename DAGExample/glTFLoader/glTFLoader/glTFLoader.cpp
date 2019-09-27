@@ -38,8 +38,9 @@ GLuint readRGBA8888(const std::string &filename) {
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		return tex;
 	}
+    std::cout << "Failed to load texture: " << filename << std::endl;
+    printf("Error: %s\n", stbi_failure_reason());
 	return 0;
-	// throw std::exception(std::string("Failed to load texture: ").append(filename).c_str());
 	// FIXME: Just log error?...
 }
 
@@ -193,7 +194,7 @@ GLuint getTextureId(const json &material, const std::string &name) {
 		const json &texture      = root["textures"][source_id];
 		/* Sampler etc... */
 		return texture["source"];
-	}
+    }
 	return NO_ID_SENTINEL;
 }
 
@@ -223,6 +224,7 @@ void from_json(const json &j, Material &m) {
 			m.metallic_roughness.baseColorTexture         = getTextureId(*pbr, "baseColorTexture");
 			m.metallic_roughness.metallicRoughnessTexture = getTextureId(*pbr, "metallicRoughnessTexture");
 			auto it = pbr->find("baseColorFactor");
+			assert(it != pbr->end());
 			if(it != pbr->end()){
 				m.metallic_roughness.baseColorFactor[0] = (*it)[0];
 				m.metallic_roughness.baseColorFactor[1] = (*it)[1];

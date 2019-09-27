@@ -126,13 +126,15 @@ void main() {
 	///////////////////////////////////////////////////////////////////////
 	// Fetch color (once per shader invocation)
 	///////////////////////////////////////////////////////////////////////
-	vec3 base_color = texture2D(u_BaseColorSampler, uv).rgb;
-	
+	vec4 base_color = texture2D(u_BaseColorSampler, uv);
+
     vec3 normal = texture(u_NormalSampler, uv).rgb;
 
-	float diff = 0.5 + max(0, dot(fs_normal, normalize(vec3(1, 1, 1))));
+	if(base_color.a < 0.1f) return;
 
-	base_color.rgb *= diff;
+	//float diff = 0.5 + max(0, dot(fs_normal, normalize(vec3(1, 1, 1))));
+
+	//base_colors *= diff;
 	
 	vec3 subvoxel_pos = vec3((gl_FragCoord.x), 
 							(gl_FragCoord.y), 
@@ -149,7 +151,7 @@ void main() {
 		clamp(int(subvoxel_pos.z - dzdx - dzdy), 0, grid_dim-1)
 	};
 	sort(apa);
-	for(int i = 0; i<1; ++i){ 
+	for(int i = 0; i<1; ++i){
 		if(i == 0 || apa[i] != apa[i-1]){
 			uvec3 subvoxel_coord2 = uvec3(clamp(uvec2(subvoxel_pos.xy), uvec2(0), uvec2(grid_dim-1)), uint(apa[i]));
 			if      (axis_id == 1) { subvoxel_coord2.xyz = subvoxel_coord2.zyx; }
@@ -157,8 +159,8 @@ void main() {
 			else if (axis_id == 3) { subvoxel_coord2.xyz = subvoxel_coord2.yxz; }
 			uint32_t idx   = atomicCounterIncrement(frag_count);
 			position_ssbo[idx] = mortonEncode32(subvoxel_coord2.x, subvoxel_coord2.y, subvoxel_coord2.z);
-			uvec4 color_enc;
-			color_enc.rgb = clamp(uvec3(round(255.0 * base_color.rgb)), uvec3(0), uvec3(255));
+			uvec4 color_enc = clamp(uvec4(round(255.0 * base_color)), uvec4(0), uvec4(255));
+			color_enc.a = 255;
 			base_color_ssbo[idx]   = (color_enc.r  << 24) | (color_enc.g  << 16) | (color_enc.b  << 8) | (color_enc.a  << 0);
 		}
 	}

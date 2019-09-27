@@ -5,6 +5,7 @@
 #include <tuple>
 #include <utils/Aabb.h>
 #include <vector>
+#include <chrono>
 
 #ifndef __CUDACC__
 #include "Merger.h"
@@ -63,9 +64,29 @@ class DAGConstructor {
 
 		// Create sub DAGs from the sub volumes. Note that not all volumes may contain geometry, hence std::optional.
 		std::vector<std::optional<dag::DAG>> dags(aabb_list.size());
-		for (int i{0}; i < aabb_list.size(); ++i) 
-		{
-			std::cout << "Generating sub DAG " << i << " of " << aabb_list.size() << ".\n";
+
+        const auto startTime = std::chrono::high_resolution_clock::now();
+
+        const auto printSeconds = [](uint64_t input_seconds)
+        {
+            size_t minutes = input_seconds / 60;
+            size_t seconds = input_seconds % 60;
+
+            std::cout << minutes << ":" << seconds << " ";
+        };
+
+        for (int i{ 0 }; i < aabb_list.size(); ++i)
+        {
+            if (i % 100 == 0)
+            {
+                std::cout << "Generating sub DAG " << i << " of " << aabb_list.size() << ". ";
+                const double elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - startTime).count();
+                std::cout << " Elapsed: ";
+                printSeconds(uint64_t(elapsed));
+                std::cout << "Remaining: ";
+                printSeconds(uint64_t(elapsed * aabb_list.size() / i - elapsed));
+                std::cout << '\n';
+            }
 			auto &aabb  = aabb_list[i];
 			auto voxels = fn(aabb, std::min(max_subdag_resolution, geometry_resolution));
 			if (voxels.count > 0) {

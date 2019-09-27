@@ -191,9 +191,9 @@ struct AppState {
 constexpr bool load_cached{ false };
 constexpr bool load_compressed{ false };
 
-const char* dag_file              = R"(cache\dag16k.bin)";
-const char* raw_color_file        = R"(cache\raw16k.bin)";
-const char* compressed_color_file = R"(cache\compressed16k.bin)";
+const char* dag_file              = R"(cache/dag16k.bin)";
+const char* raw_color_file        = R"(cache/raw16k.bin)";
+const char* compressed_color_file = R"(cache/compressed16k.bin)";
 
 int main(int argc, char* argv[]) {
 	init();
@@ -203,7 +203,8 @@ int main(int argc, char* argv[]) {
 	//a = cerealization::bin::load_vec<uint32_t>(R"(cache\kekekek.bin)");
 	//exit(0);
 
-	constexpr int dag_resolution{ 2048 };
+	constexpr int dag_resolution{ 1 << 16 };
+	std::cout << "Resolution: " << dag_resolution << std::endl;
 	//constexpr int dag_resolution{512};
 	std::optional<dag::DAG> dag;
 	ours_varbit::OursData compressed_color;
@@ -214,7 +215,9 @@ int main(int argc, char* argv[]) {
 	}
 	else
 	{
-		dag = DAG_from_scene(dag_resolution, R"(assets\Sponza\glTF\)", "Sponza.gltf");
+//        dag = DAG_from_scene(dag_resolution, R"(assets/Sponza/glTF/)", "Sponza.gltf");
+//		dag = DAG_from_scene(dag_resolution, R"(assets/epic_citadel/)", "epiccitadel.gltf");
+		dag = DAG_from_scene(dag_resolution, R"(assets/EpicCitadel/glTF/)", "EpicCitadel.gltf");
 		//dag = DAG_from_scene(dag_resolution, R"(assets\FlightHelmet\)", "FlightHelmetFinal.gltf");
 	}
 	if (!dag)
@@ -290,6 +293,7 @@ int main(int argc, char* argv[]) {
 
 
 		upload_to_gpu(*dag);
+
 		AppState app;
 		app.camera.lookAt(vec3{ 0.0f, 1.0f, 0.0f }, vec3{ 0.0f, 0.0f, 0.0f });
 		while (app.loop)

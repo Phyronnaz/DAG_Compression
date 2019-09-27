@@ -264,7 +264,7 @@ shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 		std::size_t lhs_hash_index{0}, rhs_hash_index{0};
 		std::vector<uint32_t> new_level;
 		std::size_t lhs_dag_index{0}, rhs_dag_index{0};
-		for (int i{0}; i < combined_hashes.size(); ++ i)
+		for (size_t i{0}; i < combined_hashes.size(); ++ i)
 		{
 			auto current_hash = combined_hashes[i];
 			bool lhs_hash_match = (l_lvl >= 0 && lhs_hashes[lhs_hash_index] == current_hash);

@@ -10,6 +10,7 @@
 #include <iostream>
 #include <fstream>
 #include <tuple>
+#include <chrono>
 
 #include <glm/glm.hpp>
 
@@ -27,7 +28,7 @@ namespace ours_varbit {
   vec3 r4_to_float3(uint32_t rgb)
   {
     return vec3(
-      ((rgb >> 0) & 0xF) / 15.0f,
+      float((rgb >> 0) & 0xF) / 15.0f,
       0.0f,
       0.0f
     );
@@ -36,7 +37,7 @@ namespace ours_varbit {
   vec3 r8_to_float3(uint32_t rgb)
   {
     return vec3(
-      ((rgb >> 0) & 0xFF) / 255.0f,
+      float((rgb >> 0) & 0xFF) / 255.0f,
       0.0f,
       0.0f
     );
@@ -45,7 +46,7 @@ namespace ours_varbit {
   vec3 r16_to_float3(uint32_t rgb)
   {
     return vec3(
-      ((rgb >> 0) & 0xFFFF) / 65535.0f,
+      float((rgb >> 0) & 0xFFFF) / 65535.0f,
       0.0f,
       0.0f
     );
@@ -300,8 +301,8 @@ namespace ours_varbit {
 
     double add_to_final(
       const vector<end_block>& solution,
-      uint64_t& global_bptr,
-      uint64_t& macro_w_bptr,
+      size_t& global_bptr,
+      size_t& macro_w_bptr,
       vector<int>& wrong_colors,
       vector<int>& ok_colors
     );
@@ -821,22 +822,36 @@ namespace ours_varbit {
 	assert(result < std::numeric_limits<int>::max());
 	const int nof_parts = int(result);
 
-    uint64_t global_bptr = 0;
-    uint64_t macro_w_bptr = 0;
+    size_t global_bptr = 0;
+    size_t macro_w_bptr = 0;
+
+    const auto startTime = std::chrono::high_resolution_clock::now();
+
+    const auto printSeconds = [](uint64_t input_seconds)
+    {
+        size_t minutes = input_seconds / 60;
+        size_t seconds = input_seconds % 60;
+
+        cout << minutes << ":" << seconds << " ";
+    };
 
     for (int part = 0; part < nof_parts; part++)
     {
-      if (part % 100 == 0)
-      {
-        cout
-          << "Part: "
-          << part
-          << " of "
-          << nof_parts
-          << " header_size: "
-          << h_block_headers.size()
-          << '\n';
-      }
+        if (part % 100 == 0)
+        {
+            const double elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - startTime).count();
+            cout << "Part: "
+                 << part
+                 << " of "
+                 << nof_parts
+                 << " header_size: "
+                 << h_block_headers.size()
+                 << " Elapsed: ";
+            printSeconds(uint64_t(elapsed));
+            cout << "Remaining: ";
+            printSeconds(uint64_t(elapsed * nof_parts / part - elapsed));
+            cout << '\n';
+        }
 
       const size_t part_size =
         (part == nof_parts - 1) ?
@@ -908,12 +923,12 @@ namespace ours_varbit {
     {
       block()
         : start_node(0xBADC0DE) {};
-      block(uint32_t start, uint32_t rng)
+      block(size_t start, size_t rng)
         : start_node(start)
         , range(rng)
         , dirty(true) {};
-      uint32_t start_node;
-      uint32_t range;
+      size_t start_node;
+      size_t range;
       vec3 minpoint;
       vec3 maxpoint;
       bool dirty;
@@ -928,13 +943,13 @@ namespace ours_varbit {
     {
       int vals_per_weight = 1 << bits_per_weight;
 
-      uint64_t block_index = 0;
-      vector<BlockBuild> buildBlocks(workingColorSet.size(), BlockBuild(UINT32_MAX));
+      size_t block_index = 0;
+      vector<BlockBuild> buildBlocks(workingColorSet.size(), BlockBuild(-1));
 
       // Start with one block per color.
       if (bits_per_weight == min_bits_per_weight)
       {
-        for (uint32_t colorIdx = 0; colorIdx < workingColorSet.size(); ++colorIdx)
+        for (size_t colorIdx = 0; colorIdx < workingColorSet.size(); ++colorIdx)
         {
           buildBlocks[colorIdx] = BlockBuild(colorIdx);
         }
@@ -947,11 +962,10 @@ namespace ours_varbit {
         while (block_index < prev_blocks.size())
         {
           block& candidateBlock = prev_blocks[block_index];
-		  assert(0 <= int64_t(candidateBlock.start_node) - int64_t(part_start) 
-			  && int64_t(candidateBlock.start_node) - int64_t(part_start) < (int64_t)std::numeric_limits<uint32_t>::max());
+		  assert(candidateBlock.start_node >= part_start);
           buildBlocks.push_back(
             BlockBuild(
-              uint32_t(candidateBlock.start_node - part_start),
+              candidateBlock.start_node - part_start,
               candidateBlock.range
             )
           );
@@ -960,7 +974,7 @@ namespace ours_varbit {
         }
       }
 
-      uint32_t nof_blocks_merged = UINT32_MAX;
+      size_t nof_blocks_merged = 1;
       while (nof_blocks_merged > 0)
       {
         nof_blocks_merged = 0;
@@ -1088,10 +1102,9 @@ namespace ours_varbit {
         );
 
         // Insert the blocks into our block tree.
-        for (uint64_t i = 0; i < buildBlocks.size(); i++)
+        for (size_t i = 0; i < buildBlocks.size(); i++)
         {
-		  assert(buildBlocks[i].blockStart + part_start < std::numeric_limits<uint32_t>::max());
-          block tmp(uint32_t(buildBlocks[i].blockStart + part_start), buildBlocks[i].blockLength);
+          block tmp(buildBlocks[i].blockStart + part_start, buildBlocks[i].blockLength);
           tmp.minpoint = vec3(
             colorRanges[2 * i + 0].x,
             colorRanges[2 * i + 0].y,
@@ -1123,14 +1136,14 @@ namespace ours_varbit {
     {
       int children_bits = parent_bits - 1;
       children[parent_bits].resize(block_tree[parent_bits].size());
-      uint32_t child_idx = 0;
-      for (uint32_t parent_idx = 0;
+      size_t child_idx = 0;
+      for (size_t parent_idx = 0;
            parent_idx < block_tree[parent_bits].size();
            parent_idx++)
       {
         const block& parent = block_tree[parent_bits][parent_idx];
-        uint32_t parent_stop = parent.start_node + parent.range;
-        uint32_t children_start = block_tree[children_bits][child_idx].start_node;
+        size_t parent_stop = parent.start_node + parent.range;
+        size_t children_start = block_tree[children_bits][child_idx].start_node;
         while (children_start < parent_stop)
         {
           children[parent_bits][parent_idx].push_back(child_idx);
@@ -1150,7 +1163,7 @@ namespace ours_varbit {
     {
       struct
       {
-        uint32_t total_bit_cost;
+        size_t total_bit_cost;
       } my, best;
     };
 
@@ -1172,7 +1185,7 @@ namespace ours_varbit {
       {
         const block& b = block_tree[bits_per_weight][block_idx];
         block_score& s = score_tree[bits_per_weight][block_idx];
-        const uint32_t total_bits = HEADER_COST + COLOR_COST + uint32_t(bits_per_weight) * b.range;
+        const size_t total_bits = HEADER_COST + COLOR_COST + bits_per_weight * b.range;
         s.my.total_bit_cost = total_bits;
         // Need to initialize the "best" cost for the leaves,
         // which will be used later to compute the parents costs.
@@ -1197,8 +1210,8 @@ namespace ours_varbit {
         const block& b = block_tree[bits_per_weight][block_idx];
         block_score& s = score_tree[bits_per_weight][block_idx];
         const auto& childs = children[bits_per_weight][block_idx];
-        uint32_t total_cost = 0;
-        uint32_t best_cost = 0;
+        size_t total_cost = 0;
+        size_t best_cost = 0;
         for (const auto& current_child : childs)
         {
           best_cost +=
@@ -1232,8 +1245,8 @@ namespace ours_varbit {
 
   double CompressionState::add_to_final(
     const vector<end_block>& solution,
-    uint64_t& global_bptr,
-    uint64_t& macro_w_bptr,
+    size_t& global_bptr,
+    size_t& macro_w_bptr,
     vector<int>& wrong_colors,
     vector<int>& ok_colors
   )
@@ -1242,7 +1255,7 @@ namespace ours_varbit {
     const int min_bits_per_weigth = 0;
 
     auto header_compressor =
-      [](uint64_t local_start_color, uint64_t local_w_bptr, int bitrate)
+      [](size_t local_start_color, size_t local_w_bptr, int bitrate)
     {
       uint32_t header = 0;
       header |= local_start_color; // bit: 0 - 13
