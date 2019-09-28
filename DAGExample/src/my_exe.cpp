@@ -203,7 +203,7 @@ int main(int argc, char* argv[]) {
 	//a = cerealization::bin::load_vec<uint32_t>(R"(cache\kekekek.bin)");
 	//exit(0);
 
-	constexpr int dag_resolution{ 1 << 16 };
+	constexpr int dag_resolution{ 1 << 17 };
 	std::cout << "Resolution: " << dag_resolution << std::endl;
 	//constexpr int dag_resolution{512};
 	std::optional<dag::DAG> dag;
@@ -275,11 +275,6 @@ int main(int argc, char* argv[]) {
 		DAGTracer dag_tracer;
 		dag_tracer.resize(screen_dim.x, screen_dim.y);
 
-		sizeof(DAGTracer);
-		sizeof(AppState);
-		sizeof(ColorData);
-		sizeof(disc_vector<uint32_t>);
-		sizeof(dag::DAG);
 		ColorData tmp;
 		tmp.bits_per_weight = compressed_color.bits_per_weight;
 		tmp.nof_blocks = compressed_color.nof_blocks;

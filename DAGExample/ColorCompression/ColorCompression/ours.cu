@@ -712,6 +712,8 @@ float3 * g_dev_colors = nullptr;
 uint8_t * g_dev_weights = nullptr;
 size_t g_numColors = 0;
 
+#include <csignal>
+
 void uploadColors(const vector<float3> &colors)
 {
   if (g_dev_weights) cudaFree(g_dev_weights);
@@ -719,10 +721,27 @@ void uploadColors(const vector<float3> &colors)
 
   g_numColors = colors.size();
 
+    {
+        cudaError_t err = cudaGetLastError();
+		if( cudaSuccess != err ) {
+			std::fprintf( stderr, "ERROR %s:%d: cuda error \"%s\"\n", __FILE__, __LINE__, cudaGetErrorString(err) );
+			raise(SIGTRAP);
+		}
+    }
+
+//    printf("Allocating %zu weights (%fMB)\n", colors.size(), colors.size()  * sizeof(uint8_t) / double(1 << 20));
+//    printf("Allocating %zu colors (%fMB)\n", colors.size(), colors.size()  * sizeof(float3) / double(1 << 20));
+
   // alloc per-color memory
-  cudaMalloc(&g_dev_weights, colors.size() * sizeof(uint8_t));
-  cudaMalloc(&g_dev_colors, colors.size() * sizeof(float3));
+  cudaMallocManaged(&g_dev_weights, colors.size() * sizeof(uint8_t));
+  cudaMallocManaged(&g_dev_colors, colors.size() * sizeof(float3));
   cudaMemcpy(g_dev_colors, &colors[0], colors.size() * sizeof(float3), cudaMemcpyHostToDevice);
+
+        cudaError_t err = cudaGetLastError();
+		if( cudaSuccess != err ) {
+			std::fprintf( stderr, "ERROR %s:%d: cuda error \"%s\"\n", __FILE__, __LINE__, cudaGetErrorString(err) );
+			raise(SIGTRAP);
+		}
 }
 
 void scores_gpu(
@@ -758,9 +777,12 @@ void scores_gpu(
 
     blockAllocSize = blocks.size();
 
-    cudaMalloc(&pBlocks, blockAllocSize * sizeof(BlockBuild));
-    cudaMalloc(&pScores, blockAllocSize * sizeof(float));
-    cudaMalloc(&pColorRanges, blockAllocSize * 2 * sizeof(float3));
+//    printf("Allocating %zu blocks (%fMB)\n", blockAllocSize, blockAllocSize  * sizeof(BlockBuild) / double(1 << 20));
+//    printf("Allocating %zu blocks scores (%fMB)\n", blockAllocSize, blockAllocSize  * sizeof(float) / double(1 << 20));
+//    printf("Allocating %zu blocks ranges (%fMB)\n", blockAllocSize, blockAllocSize  * 2 * sizeof(float3) / double(1 << 20));
+    cudaMallocManaged(&pBlocks, blockAllocSize * sizeof(BlockBuild));
+    cudaMallocManaged(&pScores, blockAllocSize * sizeof(float));
+    cudaMallocManaged(&pColorRanges, blockAllocSize * 2 * sizeof(float3));
   }
 
   // upload blocks
@@ -771,6 +793,7 @@ void scores_gpu(
   {
     cudaMalloc(&jobQueue, sizeof(int));
   }
+  assert(blocks.size() < std::numeric_limits<int32_t>::max());
   int jobs = int(blocks.size()) - 1; // first job is the last valid idx.
   cudaMemcpy(jobQueue, &jobs, sizeof(int), cudaMemcpyHostToDevice);
 

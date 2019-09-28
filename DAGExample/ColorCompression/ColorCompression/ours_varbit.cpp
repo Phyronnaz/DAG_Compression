@@ -17,6 +17,8 @@
 #define _USE_MATH_DEFINES
 #include <math.h>
 
+#include <csignal>
+
 #define DEBUG_ERROR false
 
 using namespace std;
@@ -996,6 +998,12 @@ namespace ours_varbit {
           vals_per_weight
         );
 
+        cudaError_t err = cudaGetLastError();
+		if( cudaSuccess != err ) {
+			std::fprintf( stderr, "ERROR %s:%d: cuda error \"%s\"\n", __FILE__, __LINE__, cudaGetErrorString(err) );
+			raise(SIGTRAP);
+		}
+
         // Loop through all scores and merge with the best one.
         // We start at the second block and jump two (or three) blocks
         // forward each iteration.
@@ -1146,6 +1154,7 @@ namespace ours_varbit {
         size_t children_start = block_tree[children_bits][child_idx].start_node;
         while (children_start < parent_stop)
         {
+            assert(child_idx < std::numeric_limits<uint32_t>::max());
           children[parent_bits][parent_idx].push_back(child_idx);
           child_idx++;
           if (child_idx >= block_tree[children_bits].size())
@@ -1487,7 +1496,9 @@ namespace ours_varbit {
         d_vec = nullptr;
       }
       const size_t count = h_vec.size() * sizeof(T);
-      cudaMalloc((void**)&d_vec, count);
+      cudaMallocManaged((void**)&d_vec, count);
+
+    printf("Allocating %zu things (%fMB)\n", h_vec.size(), h_vec.size()  * sizeof(T) / double(1 << 20));
       cudaMemcpy(d_vec, h_vec.data(), count, cudaMemcpyHostToDevice);
     };
     upload_vector(ours_dat.h_block_headers, ours_dat.d_block_headers);
