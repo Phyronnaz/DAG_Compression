@@ -3,7 +3,7 @@ project(DAG_Compression LANGUAGES CUDA CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CUDA_STANDARD 14)
-set(CMAKE_CXX_FLAGS_DEBUG "-g -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "-g -O0")
 set(CMAKE_CXX_FLAGS_RELEASE "-g -O3")
 
 # Ignore some warnings that add a lot of spam and aren't that critical:

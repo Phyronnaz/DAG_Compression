@@ -111,7 +111,16 @@ class DAGConstructor {
 		std::cout << "Start merging DAGs...\n";
 		while (dags_left != 1) {
 			std::cout << "Passes left: " << (int)(std::log(dags_left)/std::log(8)) << ".\n";
+            const auto passStartTime = std::chrono::high_resolution_clock::now();
 			for (std::size_t i{0}; i < dags_left / 8; ++i) {
+                std::cout << "Sub - pass " << i+1 << " of " << dags_left / 8;
+                const double elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - passStartTime).count();
+                std::cout << " Elapsed: ";
+                printSeconds(uint64_t(elapsed));
+                std::cout << "Remaining: ";
+                printSeconds(uint64_t(elapsed * dags_left / 8 / (i + 1) - elapsed));
+                std::cout << '\n';
+
 				std::array<std::optional<dag::DAG>, 8> batch;
 				for (int j{0}; j < 8; ++j) { batch[j] = std::move(dags[8 * i + j]); }
 				merged_dags[i] = merger::merge(batch);
@@ -121,6 +130,13 @@ class DAGConstructor {
 			std::swap(dags, merged_dags);
 		}
 		std::cout << "done.\n";
+
+        {
+            const double elapsed = std::chrono::duration_cast<std::chrono::duration<double>>(std::chrono::high_resolution_clock::now() - startTime).count();
+            std::cout << "Total Elapsed: ";
+            printSeconds(uint64_t(elapsed));
+            std::cout << std::endl;
+        }
 
 		// When all DAGs have been merged, the result resides in the
 		// first slot of the array.

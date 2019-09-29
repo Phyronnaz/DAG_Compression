@@ -203,7 +203,7 @@ int main(int argc, char* argv[]) {
 	//a = cerealization::bin::load_vec<uint32_t>(R"(cache\kekekek.bin)");
 	//exit(0);
 
-	constexpr int dag_resolution{ 1 << 17 };
+	constexpr int dag_resolution{ 1 << 18 };
 	std::cout << "Resolution: " << dag_resolution << std::endl;
 	//constexpr int dag_resolution{512};
 	std::optional<dag::DAG> dag;
@@ -243,7 +243,7 @@ int main(int argc, char* argv[]) {
 			compressed_color = ours_varbit::compressColors_alternative_par(std::move(da), 0.05f, ours_varbit::ColorLayout::RGB_5_6_5);
 			cerealization::bin::save(compressed_color, compressed_color_file);
 		}
-		if (!load_cached)
+		if (!load_cached && 0)
 		{
 			FileWriter writer("cache/result.basic_dag.uncompressed_colors.bin");
 			writer.write(dag->m_top_levels);

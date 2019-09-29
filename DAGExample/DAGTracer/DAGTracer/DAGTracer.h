@@ -45,7 +45,7 @@ private:
 	std::ofstream os;
 };
 
-#define MAX_LEVELS 17
+#define MAX_LEVELS 18
 #define IN_ORDER_TRAVERSAL 1
 #define NEXT_CHILD_LUT 1
 

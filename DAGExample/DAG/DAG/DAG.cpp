@@ -61,7 +61,7 @@ void DAG::calculateColorForAllNodes() {
 	////////////////////////////////////////////////////
 	// PASS 1: Calculate new color index for each node
 	////////////////////////////////////////////////////
-	uint32_t n_child_offset = 0;
+	uint64_t n_child_offset = 0;
 	for(int level = m_levels - 1 ; level >=0; --level)
 	{
 		for( uint32_t node_index = 0; node_index<m_data[level].size();)
@@ -113,12 +113,14 @@ void DAG::calculateColorForAllNodes() {
 			// We don't store nodes in subtree for root.
 			if(level != 0)
 			{
+			    assert(n_child_offset != 0);
 				if(level < (int)m_top_levels)
 				{
 					m_enclosed_leaves[node_mask >> 8] = n_child_offset;
 				}
 				else 
 				{
+				    assert(n_child_offset < (1 << 24));
 					node_mask = (node_mask & 0xFF) | (n_child_offset << 8);
 				}
 			}

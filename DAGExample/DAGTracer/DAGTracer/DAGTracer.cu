@@ -76,8 +76,8 @@ void upload_to_gpu(dag::DAG &dag)
 	cudaMemcpy(dag.d_color_data, dag.m_base_colors.data(), dag.m_base_colors.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
 
 	if (dag.m_enclosed_leaves.size() != 0){
-		cudaMalloc(&dag.d_enclosed_leaves, dag.m_enclosed_leaves.size() * sizeof(uint32_t));
-		cudaMemcpy(dag.d_enclosed_leaves,  dag.m_enclosed_leaves.data(), dag.m_enclosed_leaves.size() * sizeof(uint32_t), cudaMemcpyHostToDevice);
+		cudaMalloc(&dag.d_enclosed_leaves, dag.m_enclosed_leaves.size() * sizeof(uint64_t));
+		cudaMemcpy(dag.d_enclosed_leaves,  dag.m_enclosed_leaves.data(), dag.m_enclosed_leaves.size() * sizeof(uint64_t), cudaMemcpyHostToDevice);
 	}
 }
 

@@ -251,6 +251,8 @@ Scene load(const std::string &path, const std::string &file) {
 	Scene result;
 	std::ifstream myfile(path + file);
 
+	assert(myfile.is_open());
+
 	// json root;
 	myfile >> root;
 

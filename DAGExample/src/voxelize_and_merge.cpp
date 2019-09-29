@@ -22,7 +22,7 @@ using glm::vec4;
 
 std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::string scene_folder, const std::string scene_file)
 {
-	std::cout << "Loading scene... ";
+	std::cout << "Loading scene... " << scene_folder << scene_file << std::endl;
 	glTFLoader::Scene scene = glTFLoader::load(scene_folder, scene_file);
 	std::cout << "done.\n";
 	voxelizer::Voxelizer voxel_generator(std::min(dag_resolution, max_subdag_resolution));

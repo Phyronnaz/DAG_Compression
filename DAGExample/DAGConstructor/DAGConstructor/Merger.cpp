@@ -200,7 +200,7 @@ shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 {
 	std::vector<std::vector<uint32_t>> merged_dag;
 	std::vector<std::vector<uint64_t>> merged_hashes;
-	std::vector<uint32_t> merged_enclosed_leaves;
+	std::vector<uint64_t> merged_enclosed_leaves;
 	std::vector<uint32_t> lhs_index_offsets;
 	std::vector<uint32_t> rhs_index_offsets;
 	std::vector<uint32_t> lhs_node_start;
@@ -285,7 +285,7 @@ shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 				{
 					// Look up enclosed leaves.
 					uint32_t idx = child_mask >> 8;
-					uint32_t node_enclosed = enclosed[idx];
+					uint64_t node_enclosed = enclosed[idx];
 					// Update index part of mask, and add to array.
 					child_mask &= 0xFF;
 					child_mask |= ((enclosed_ctr++)<<8);
@@ -390,14 +390,15 @@ merge(const std::array<std::optional<dag::DAG>, 8> &batch)
 		uint32_t node_offset;
 	};
 	std::vector<NodeInfo> node_info;
-	uint32_t mask{0}, enclosed{0}, ctr{0}, ctr2{0};
+	uint32_t mask{0}, ctr{0}, ctr2{0};
+	uint64_t enclosed{0};
 	for(auto & v:batch)
 	{
 		if(v)
 		{
 			mask |= 1u << ctr;
 			uint32_t enclosed_mask = v->m_data[0][0] >> 8;
-			enclosed += v->m_enclosed_leaves.size() == 0u ? enclosed_mask : v->m_enclosed_leaves[enclosed_mask];
+			enclosed += v->m_enclosed_leaves.empty() ? enclosed_mask : v->m_enclosed_leaves[enclosed_mask];
 			dags.push_back(&v.value());
 			node_info.emplace_back(NodeInfo{
 				v->m_hashes[0][0],

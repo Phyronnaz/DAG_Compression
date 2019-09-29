@@ -22,7 +22,7 @@ get_file_contents(const char* filename)
 const std::string vert_src = 
 #include "voxelize.vert"
 ;
-const std::string frag_src = 
+const std::string frag_src =
 #include "voxelize.frag"
 ;
 const std::string geom_src = 

@@ -53,8 +53,8 @@ class DAG {
 	// there, into a separate array of 32 bit "enclosed leaves" entries.
 	///////////////////////////////////////////////////////////////////////////
 	uint32_t m_top_levels = 0;
-	uint32_t *d_enclosed_leaves = nullptr;
-	std::vector<uint32_t> m_enclosed_leaves;
+	uint64_t *d_enclosed_leaves = nullptr;
+	std::vector<uint64_t> m_enclosed_leaves;
 	bool colors_in_all_nodes{false};
 
 	chag::Aabb m_aabb;
