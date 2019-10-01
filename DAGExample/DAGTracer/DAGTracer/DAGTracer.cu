@@ -531,7 +531,7 @@ color_lookup_kernel_morton(
 	cudaSurfaceObject_t path_buffer,
 	uint32_t *dag, 
 	uint32_t *dag_color, 
-	uint32_t *enclosed_leaves,
+	uint64_t *enclosed_leaves,
 	uint32_t nof_top_levels, 
 	cudaSurfaceObject_t output_image,
 	bool all_colors,

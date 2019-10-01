@@ -203,7 +203,7 @@ int main(int argc, char* argv[]) {
 	//a = cerealization::bin::load_vec<uint32_t>(R"(cache\kekekek.bin)");
 	//exit(0);
 
-	constexpr int dag_resolution{ 1 << 18 };
+	constexpr int dag_resolution{ 1 << 14 };
 	std::cout << "Resolution: " << dag_resolution << std::endl;
 	//constexpr int dag_resolution{512};
 	std::optional<dag::DAG> dag;
@@ -215,9 +215,10 @@ int main(int argc, char* argv[]) {
 	}
 	else
 	{
-//        dag = DAG_from_scene(dag_resolution, R"(assets/Sponza/glTF/)", "Sponza.gltf");
-//		dag = DAG_from_scene(dag_resolution, R"(assets/epic_citadel/)", "epiccitadel.gltf");
-		dag = DAG_from_scene(dag_resolution, R"(assets/EpicCitadel/glTF/)", "EpicCitadel.gltf");
+	        dag = DAG_from_scene(dag_resolution, R"(assets/Sponza/glTF/)", "Sponza.gltf");
+		//dag = DAG_from_scene(dag_resolution, R"(assets/epic_citadel/)", "epiccitadel.gltf");
+		//dag = DAG_from_scene(dag_resolution, R"(assets/EpicCitadel/glTF/)", "EpicCitadel.gltf");
+		//dag = DAG_from_scene(dag_resolution, R"(assets/SanMiguel/)", "san-miguel-low-poly.gltf");
 		//dag = DAG_from_scene(dag_resolution, R"(assets\FlightHelmet\)", "FlightHelmetFinal.gltf");
 	}
 	if (!dag)
