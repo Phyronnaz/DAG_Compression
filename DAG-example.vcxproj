@@ -379,6 +379,7 @@
     <ClInclude Include="thirdparty\stb\stb\stb_truetype.h" />
     <ClInclude Include="thirdparty\stb\stb\stb_voxel_render.h" />
     <ClInclude Include="thirdparty\stb\stb\stretchy_buffer.h" />
+    <ClInclude Include="thirdparty\tracy\Tracy.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DAGExample\ColorCompression\ColorCompression\ours.cpp" />
@@ -397,6 +398,7 @@
     <ClCompile Include="DAGExample\Voxelizer\Voxelizer\Voxelizer.cpp" />
     <ClCompile Include="thirdparty\glm\glm\detail\glm.cpp" />
     <ClCompile Include="thirdparty\stb\stb\stb_vorbis.c" />
+    <ClCompile Include="thirdparty\tracy\TracyClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <CudaCompile Include="DAGExample\ColorCompression\ColorCompression\ours.cu" />
@@ -604,7 +606,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <LinkIncremental>false</LinkIncremental>
-    <IncludePath>DAGExample\ColorCompression;thirdparty\stb;thirdparty\cereal\include;thirdparty\glm;DAGExample\Voxelizer;DAGExample\glTFLoader;DAGExample\DAGTracer;DAGExample\DAGLoader;DAGExample\DAGConstructor;DAGExample\utils;$(VC_IncludePath);$(WindowsSDK_IncludePath);DAGExample\DAG</IncludePath>
+    <IncludePath>C:\ROOT\DAG_Compression\thirdparty;DAGExample\ColorCompression;thirdparty\stb;thirdparty\cereal\include;thirdparty\glm;DAGExample\Voxelizer;DAGExample\glTFLoader;DAGExample\DAGTracer;DAGExample\DAGLoader;DAGExample\DAGConstructor;DAGExample\utils;$(VC_IncludePath);$(WindowsSDK_IncludePath);DAGExample\DAG</IncludePath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <ClCompile>
@@ -663,7 +665,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <PreprocessorDefinitions>GLM_FORCE_PURE;_CONSOLE;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>GLM_FORCE_PURE;_CONSOLE;_SILENCE_ALL_CXX17_DEPRECATION_WARNINGS;%(PreprocessorDefinitions);TRACY_ENABLE;_CRT_SECURE_NO_WARNINGS</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <PrecompiledHeaderFile>pch.h</PrecompiledHeaderFile>
       <AdditionalIncludeDirectories>%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>

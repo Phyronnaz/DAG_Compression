@@ -6,16 +6,16 @@
 #include <utils/Aabb.h>
 #include <vector>
 #include <chrono>
+#include "tracy/Tracy.hpp"
 
 #ifndef __CUDACC__
 #include "Merger.h"
 #endif
-uint32_t count_child_nodes(int lvl, int bottomlevel, uint32_t node_idx, std::vector<std::vector<uint32_t>> *dag);
-std::tuple<uint32_t, uint32_t> count_child_nodes2(int lvl, int bottomlevel, uint32_t node_idx,
-																									std::vector<uint32_t> *dag);
+uint32_t count_child_nodes(int lvl, int bottomlevel, uint32_t node_idx, std::vector<std::vector<uint32_t>>* dag);
+std::tuple<uint32_t, uint32_t> count_child_nodes2(int lvl, int bottomlevel, uint32_t node_idx, std::vector<uint32_t>* dag);
 
 namespace dag {
-class DAG;
+	class DAG;
 }
 class DAGConstructor {
 	struct impl;
@@ -56,6 +56,8 @@ class DAGConstructor {
 		chag::Aabb aabb_in
 	)
 	{
+		ZoneScoped
+		
 		auto aabb_list = std::vector<chag::Aabb>(1, aabb_in);
 		// If the geometry resolution is too high, we need to split the geometry into smaller sub volumes
 		// and process them independently. They are later merged to the final result.

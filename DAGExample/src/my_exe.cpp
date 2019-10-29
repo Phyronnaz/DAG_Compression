@@ -17,6 +17,7 @@
 #include "glTFLoader/glTFLoader.h"
 #include "voxelize_and_merge.h"
 #include "ColorCompression/ours_varbit.h"
+#include "tracy/Tracy.hpp"
 
 using glm::ivec2;
 using glm::vec2;
@@ -198,6 +199,8 @@ const char* compressed_color_file = R"(cache/compressed16k.bin)";
 int main(int argc, char* argv[]) {
 	init();
 
+	ZoneScoped
+	
 	//std::vector<uint32_t> a{ 1, 2, 3, 4, 5 };
 	//cerealization::bin::save_vec(a, R"(cache\kekekek.bin)");
 	//a = cerealization::bin::load_vec<uint32_t>(R"(cache\kekekek.bin)");
@@ -215,11 +218,9 @@ int main(int argc, char* argv[]) {
 	}
 	else
 	{
-	        dag = DAG_from_scene(dag_resolution, R"(assets/Sponza/glTF/)", "Sponza.gltf");
-		//dag = DAG_from_scene(dag_resolution, R"(assets/epic_citadel/)", "epiccitadel.gltf");
+	    dag = DAG_from_scene(dag_resolution, R"(assets/Sponza/glTF/)", "Sponza.gltf");
 		//dag = DAG_from_scene(dag_resolution, R"(assets/EpicCitadel/glTF/)", "EpicCitadel.gltf");
 		//dag = DAG_from_scene(dag_resolution, R"(assets/SanMiguel/)", "san-miguel-low-poly.gltf");
-		//dag = DAG_from_scene(dag_resolution, R"(assets\FlightHelmet\)", "FlightHelmetFinal.gltf");
 	}
 	if (!dag)
 	{

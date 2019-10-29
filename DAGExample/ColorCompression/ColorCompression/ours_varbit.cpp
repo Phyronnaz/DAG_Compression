@@ -1001,7 +1001,6 @@ namespace ours_varbit {
         cudaError_t err = cudaGetLastError();
 		if( cudaSuccess != err ) {
 			std::fprintf( stderr, "ERROR %s:%d: cuda error \"%s\"\n", __FILE__, __LINE__, cudaGetErrorString(err) );
-			raise(SIGTRAP);
 		}
 
         // Loop through all scores and merge with the best one.

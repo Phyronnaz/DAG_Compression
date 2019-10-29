@@ -11,6 +11,7 @@
 #include "DAGConstructor/DAGConstructor.h"
 #include "Voxelizer/Voxelizer.h"
 #include "glTFLoader/glTFLoader.h"
+#include "tracy/Tracy.hpp"
 
 using glm::ivec2;
 using glm::vec2;
@@ -22,6 +23,8 @@ using glm::vec4;
 
 std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::string scene_folder, const std::string scene_file)
 {
+	ZoneScoped;
+	
 	std::cout << "Loading scene... " << scene_folder << scene_file << std::endl;
 	glTFLoader::Scene scene = glTFLoader::load(scene_folder, scene_file);
 	std::cout << "done.\n";
@@ -142,6 +145,7 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 		uint32_t count;
 	};
 	auto frag_fn = [&](const chag::Aabb &aabb, int resolution) {
+		ZoneScopedN("frag_fn");
 		auto count = voxel_generator.generate_fragments(draw_fn, aabb, resolution);
 		return RawData{
 			d_positions,

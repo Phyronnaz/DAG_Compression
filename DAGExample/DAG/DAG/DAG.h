@@ -4,6 +4,7 @@
 #include <cstdint>
 #include <vector>
 #include <utils/Aabb.h>
+#include <chrono>
 
 #ifdef _MSC_VER
 #include <intrin.h>

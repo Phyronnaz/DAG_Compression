@@ -725,7 +725,6 @@ void uploadColors(const vector<float3> &colors)
         cudaError_t err = cudaGetLastError();
 		if( cudaSuccess != err ) {
 			std::fprintf( stderr, "ERROR %s:%d: cuda error \"%s\"\n", __FILE__, __LINE__, cudaGetErrorString(err) );
-			raise(SIGTRAP);
 		}
     }
 
@@ -740,7 +739,6 @@ void uploadColors(const vector<float3> &colors)
         cudaError_t err = cudaGetLastError();
 		if( cudaSuccess != err ) {
 			std::fprintf( stderr, "ERROR %s:%d: cuda error \"%s\"\n", __FILE__, __LINE__, cudaGetErrorString(err) );
-			raise(SIGTRAP);
 		}
 }
 

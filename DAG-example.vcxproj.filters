@@ -361,6 +361,7 @@
     <ClInclude Include="DAGExample\ColorCompression\ColorCompression\ours_varbit.h" />
     <ClInclude Include="DAGExample\ColorCompression\ColorCompression\svd.h" />
     <ClInclude Include="DAGExample\ColorCompression\ColorCompression\BlockBuild.h" />
+    <ClInclude Include="thirdparty\tracy\Tracy.hpp" />
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="DAGExample\DAG\DAG\DAG.cpp" />
@@ -379,6 +380,7 @@
     <ClCompile Include="DAGExample\ColorCompression\ColorCompression\ours_varbit.cpp" />
     <ClCompile Include="DAGExample\ColorCompression\ColorCompression\svd.cpp" />
     <ClCompile Include="DAGExample\ColorCompression\ColorCompression\ours.cpp" />
+    <ClCompile Include="thirdparty\tracy\TracyClient.cpp" />
   </ItemGroup>
   <ItemGroup>
     <None Include="thirdparty\cereal\include\cereal\external\rapidxml\manual.html" />
