@@ -11,9 +11,21 @@ uint32_t splitBy3_32(uint32_t x) {
 	x = (x | (x <<  2)) & 0x09249249; // x = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
 	return x;
 };
-
 uint32_t mortonEncode32(uint32_t x, uint32_t y, uint32_t z) {
 	return splitBy3_32(x) << 2 | splitBy3_32(y) << 1 | splitBy3_32(z);
+};
+
+uint64_t splitBy3_64(uint32_t a) {
+	uint64_t x = a & 0x1fffff; // we only look at the first 21 bits
+	x = (x | x << 32) & 0x1f00000000fffful; // shift left 32 bits, OR with self, and 00011111000000000000000000000000000000001111111111111111
+	x = (x | x << 16) & 0x1f0000ff0000fful; // shift left 32 bits, OR with self, and 00011111000000000000000011111111000000000000000011111111
+	x = (x | x << 8) & 0x100f00f00f00f00ful; // shift left 32 bits, OR with self, and 0001000000001111000000001111000000001111000000001111000000000000
+	x = (x | x << 4) & 0x10c30c30c30c30c3ul; // shift left 32 bits, OR with self, and 0001000011000011000011000011000011000011000011000011000100000000
+	x = (x | x << 2) & 0x1249249249249249ul;
+	return x;
+};
+uint64_t mortonEncode64(uint32_t x, uint32_t y, uint32_t z) {
+	return splitBy3_64(x) << 2 | splitBy3_64(y) << 1 | splitBy3_64(z);
 };
 
 vec4 SRGBtoLINEAR(vec4 srgbIn)
@@ -115,7 +127,7 @@ in vec3 barycoords;
 flat in vec3 fs_gnormal;
 
 layout ( binding = 0 ) uniform atomic_uint frag_count;
-layout(binding = 0, std430) restrict coherent buffer item_buffer_block0{ uint32_t position_ssbo[]; };
+layout(binding = 0, std430) restrict coherent buffer item_buffer_block0{ uint64_t position_ssbo[]; };
 layout(binding = 1, std430) restrict coherent buffer item_buffer_block2{ uint32_t base_color_ssbo[]; };
 
 uniform int grid_dim;
@@ -158,7 +170,7 @@ void main() {
 			else if (axis_id == 2) { subvoxel_coord2.xyz = subvoxel_coord2.xzy; }
 			else if (axis_id == 3) { subvoxel_coord2.xyz = subvoxel_coord2.yxz; }
 			uint32_t idx   = atomicCounterIncrement(frag_count);
-			position_ssbo[idx] = mortonEncode32(subvoxel_coord2.x, subvoxel_coord2.y, subvoxel_coord2.z);
+			position_ssbo[idx] = mortonEncode64(subvoxel_coord2.x, subvoxel_coord2.y, subvoxel_coord2.z);
 			uvec4 color_enc = clamp(uvec4(round(255.0 * base_color)), uvec4(0), uvec4(255));
 			color_enc.a = 255;
 			base_color_ssbo[idx]   = (color_enc.r  << 24) | (color_enc.g  << 16) | (color_enc.b  << 8) | (color_enc.a  << 0);

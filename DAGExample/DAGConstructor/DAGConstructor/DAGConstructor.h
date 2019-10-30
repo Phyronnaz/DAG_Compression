@@ -30,7 +30,7 @@ class DAGConstructor {
 	DAGConstructor &operator=(const DAGConstructor &) = delete;
 
 	dag::DAG build_dag(
-		uint32_t *d_pos,
+		uint64_t *d_pos,
 		uint32_t *d_base_color,
 		int count,
 		int depth,
@@ -38,7 +38,7 @@ class DAGConstructor {
 	);
 
 	dag::DAG build_dag(	
-		const std::vector<uint32_t> &morton_paths,
+		const std::vector<uint64_t> &morton_paths,
 		const std::vector<uint32_t> &base_color,
 		int count,
 		int depth,

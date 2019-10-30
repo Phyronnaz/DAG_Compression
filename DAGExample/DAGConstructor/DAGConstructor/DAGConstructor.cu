@@ -96,7 +96,7 @@ struct DAGConstructor::impl {
 	thrust::device_vector<uint32_t> first_child_pos;
 	thrust::device_vector<uint32_t> child_dag_idx;
 	thrust::device_vector<uint32_t> compact_dag;
-	thrust::device_vector<uint32_t> parent_paths;
+	thrust::device_vector<uint64_t> parent_paths;
 	thrust::device_vector<uint32_t> parent_node_size;
 	thrust::device_vector<uint32_t> parent_svo_idx;
 	thrust::device_vector<uint32_t> sorted_orig_pos;
@@ -106,7 +106,7 @@ struct DAGConstructor::impl {
 	thrust::device_vector<uint32_t> parent_dag_idx;
 	thrust::device_vector<uint32_t> parent_svo_nodes;
 
-	thrust::device_vector<uint32_t> path;
+	thrust::device_vector<uint64_t> path;
 	thrust::device_vector<uint32_t> base_color;
 
 	int m_parent_svo_size;
@@ -130,12 +130,12 @@ struct DAGConstructor::impl {
 	dag::DAG build_dag(int count, int depth, const chag::Aabb &aabb);
 };
 
-__device__ uint32_t childBits(const uint32_t &val) { return uint32_t(val & 0x7); }
+__device__ uint32_t childBits(const uint64_t &val) { return uint32_t(val & 0x7); }
 
 __global__ void build_parent_level_kernel(
 	uint32_t *d_parent_svo_nodes,
 	uint32_t *d_parent_svo_idx,
-	uint32_t *d_child_paths, 
+	uint64_t *d_child_paths, 
 	uint32_t *d_first_child_pos,
 	uint32_t *d_child_dag_idx,
 	uint64_t *d_child_sort_key,
@@ -159,7 +159,7 @@ __global__ void build_parent_level_kernel(
 
 		d_parent_svo_nodes[d_parent_svo_idx[thread]] = 0;
 		for (uint32_t i = 0; i < nof_children; i++) {
-			uint32_t childpath = d_child_paths[d_first_child_pos[thread] + i];
+			uint64_t childpath = d_child_paths[d_first_child_pos[thread] + i];
 			uint32_t child_idx = childBits(childpath);
 			d_parent_svo_nodes[d_parent_svo_idx[thread]] |= (1 << child_idx);
 			if (lvl != bottomLevel) {
@@ -375,8 +375,11 @@ struct equal_to {
 	}
 };
 
-using Iter = thrust::device_vector<uint32_t>::iterator;
-auto InBegin(Iter path){
+template<typename T>
+using Iter = thrust::device_vector<T>::iterator;
+	
+template<typename T>
+auto InBegin(Iter<T> path){
 	return thrust::make_zip_iterator(
 		thrust::make_tuple(
 			thrust::make_counting_iterator(std::size_t(0ull)),
@@ -384,7 +387,8 @@ auto InBegin(Iter path){
 		)
 	);
 }
-auto InEnd(Iter path, std::size_t count) {
+template<typename T>
+auto InEnd(Iter<T> path, std::size_t count) {
 	return thrust::make_zip_iterator(
 		thrust::make_tuple(
 			thrust::make_counting_iterator(count),
@@ -392,7 +396,8 @@ auto InEnd(Iter path, std::size_t count) {
 		)
 	);
 }
-auto OutBegin(Iter first_child_pos_, Iter parent_paths_){
+template<typename T1, typename T2>
+auto OutBegin(Iter<T1> first_child_pos_, Iter<T2> parent_paths_){
 	return thrust::make_zip_iterator(
 		thrust::make_tuple(first_child_pos_, parent_paths_)
 	);
@@ -457,14 +462,14 @@ DAGConstructor::impl::buildDAG(
 		{
 			// Copy unique parent paths and their children indexes
 			{
-				auto out_iterator = IdentifyParents::OutBegin(first_child_pos.begin(), parent_paths.begin());
+				auto out_iterator = IdentifyParents::OutBegin<uint32_t, uint64_t>(first_child_pos.begin(), parent_paths.begin());
 				auto result = thrust2::distance(
 					SIZE(m_child_svo_size)
 					out_iterator,
 					thrust2::unique_copy(
 						SIZE(m_child_svo_size)
-						IdentifyParents::InBegin(path.begin()),
-						IdentifyParents::InEnd(path.begin(), m_child_svo_size),
+						IdentifyParents::InBegin<uint64_t>(path.begin()),
+						IdentifyParents::InEnd<uint64_t>(path.begin(), m_child_svo_size),
 						out_iterator,
 						IdentifyParents::equal_to()
 					)
@@ -1013,7 +1018,7 @@ void copy_to_device(thrust::device_vector<Dev_t> &dev, Dev_t *dev_ptr, const std
 
 // Base wrapper.
 dag::DAG DAGConstructor::build_dag(
-	const std::vector<uint32_t> &morton_paths,
+	const std::vector<uint64_t> &morton_paths,
 	const std::vector<uint32_t> &base_color,
 	int count,
 	int depth,
@@ -1021,6 +1026,9 @@ dag::DAG DAGConstructor::build_dag(
 )
 {
 	ZoneScoped;
+
+	assert(morton_paths.size() == count);
+	assert(base_color.size() == count);
 	
 	copy_to_device(p_impl_->path,       morton_paths, count);
 	copy_to_device(p_impl_->base_color, base_color,   count);
@@ -1029,7 +1037,7 @@ dag::DAG DAGConstructor::build_dag(
 }
 
 dag::DAG DAGConstructor::build_dag(
-	uint32_t *d_pos,
+	uint64_t *d_pos,
 	uint32_t *d_base_color,
 	int count,
 	int depth,

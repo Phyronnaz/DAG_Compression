@@ -18,7 +18,7 @@ using glm::vec2;
 using glm::vec3;
 using glm::vec4;
 
- constexpr int max_subdag_resolution{1024};
+ constexpr int max_subdag_resolution{2048};
 
 
 std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::string scene_folder, const std::string scene_file)
@@ -124,7 +124,7 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 	cudaGraphicsResource *cuda_position_resource;
 	cudaGraphicsResource *cuda_base_color_resource;
 	uint32_t *d_base_color{nullptr};
-	uint32_t *d_positions{nullptr};
+	uint64_t *d_positions{nullptr};
 
 	auto map_and_register = [](GLuint ssbo, cudaGraphicsResource *&resource, auto *&dev_ptr){
 		std::size_t num_bytes{0};
@@ -140,7 +140,7 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 	// used for construction. The raw data in this case, we get from calling the generate_fragments function
 	// of the voxelizer, which will write to the previously mapped resources.
 	struct RawData {
-		uint32_t *positions;
+		uint64_t *positions;
 		uint32_t *base_color;
 		uint32_t count;
 	};

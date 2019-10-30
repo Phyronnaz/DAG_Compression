@@ -101,7 +101,7 @@ Voxelizer::Voxelizer(int grid_size) : m_grid_size(grid_size) {
 		// Data buffer (pos).
 		glGenBuffers(1, &m_position_ssbo);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_position_ssbo);
-		glBufferData(GL_SHADER_STORAGE_BUFFER, m_tex_dim * sizeof(uint32_t), NULL, GL_STATIC_DRAW);
+		glBufferData(GL_SHADER_STORAGE_BUFFER, m_tex_dim * sizeof(uint64_t), NULL, GL_STATIC_DRAW);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
 		// Data buffer (base color)

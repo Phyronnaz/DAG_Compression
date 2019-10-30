@@ -15,7 +15,7 @@ class Voxelizer {
 	GLuint m_frag_ctr_buffer;
 	GLuint m_dummy_fbo;
 	GLuint tex;
-	int m_tex_dim = 16 * 1024 * 1024;
+	int m_tex_dim = 64 * 1024 * 1024;
 	int m_grid_size;
 	GLuint voxelize_shader{0};
 
