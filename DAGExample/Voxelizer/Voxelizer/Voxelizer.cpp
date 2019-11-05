@@ -104,12 +104,14 @@ Voxelizer::Voxelizer(int grid_size) : m_grid_size(grid_size) {
 		glBufferData(GL_SHADER_STORAGE_BUFFER, m_tex_dim * sizeof(uint64_t), NULL, GL_STATIC_DRAW);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
 
+#if 0
 		// Data buffer (base color)
 		glGenBuffers(1, &m_base_color_ssbo);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, m_base_color_ssbo);
 		glBufferData(GL_SHADER_STORAGE_BUFFER, m_tex_dim * sizeof(uint32_t), NULL, GL_STATIC_DRAW);
 		glBindBuffer(GL_SHADER_STORAGE_BUFFER, 0);
-
+#endif
+		
 		// Dummy framebuffer.
 		glGenFramebuffers(1, &m_dummy_fbo);
 		glNamedFramebufferParameteri(m_dummy_fbo, GL_FRAMEBUFFER_DEFAULT_WIDTH, m_grid_size);
@@ -122,7 +124,7 @@ Voxelizer::Voxelizer(int grid_size) : m_grid_size(grid_size) {
 Voxelizer::~Voxelizer() {
 	glDeleteBuffers(1, &m_frag_ctr_buffer);
 	glDeleteBuffers(1, &m_position_ssbo);
-	glDeleteBuffers(1, &m_base_color_ssbo);
+	//glDeleteBuffers(1, &m_base_color_ssbo);
 	glDeleteBuffers(1, &m_dummy_fbo);
 }
 }  // namespace voxelizer

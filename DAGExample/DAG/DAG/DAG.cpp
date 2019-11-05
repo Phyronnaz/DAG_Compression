@@ -41,7 +41,8 @@ bool calculate_sizes(const int node_idx, const int level, const std::vector<uint
 		return true;
 	}
 }
-
+	
+#if 0
 void DAG::calculateColorForAllNodes() {
 	colors_in_all_nodes = true;
 	// Traverse the whole DAG. Keep track of:
@@ -273,4 +274,5 @@ void DAG::calculateColorForAllNodes() {
 
 	m_base_colors = all_base_colors;
 }
+#endif
 }  // namespace dag

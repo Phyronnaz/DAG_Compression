@@ -228,6 +228,7 @@ int main(int argc, char* argv[]) {
 	}
 	else
 	{
+#if 0
 		if (!load_cached)
 		{
 			cerealization::bin::save(*dag, dag_file);
@@ -273,7 +274,8 @@ int main(int argc, char* argv[]) {
 		}
 
 		ours_varbit::upload_to_gpu(compressed_color);
-
+#endif
+		
 		DAGTracer dag_tracer;
 		dag_tracer.resize(screen_dim.x, screen_dim.y);
 

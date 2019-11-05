@@ -107,7 +107,7 @@ struct DAGConstructor::impl {
 	thrust::device_vector<uint32_t> parent_svo_nodes;
 
 	thrust::device_vector<uint64_t> path;
-	thrust::device_vector<uint32_t> base_color;
+	//thrust::device_vector<uint32_t> base_color;
 
 	int m_parent_svo_size;
 	std::size_t m_child_svo_size;
@@ -832,7 +832,7 @@ std::size_t DAGConstructor::impl::sort_and_merge_fragments(std::size_t count) {
 		}
 	};
 
-	compaction(base_color, false);
+	//compaction(base_color, false);
 
 	// Truncate positions and collect unique
 	// Calculate parent paths
@@ -976,8 +976,9 @@ dag::DAG DAGConstructor::impl::build_dag(int count, int depth, const chag::Aabb 
 				cudaMemcpyDeviceToHost
 			);
 		};
-		copy_to_host(result.m_base_colors, base_color);
+		//copy_to_host(result.m_base_colors, base_color);
 
+		if (false)
 		{
 			ZoneScopedN("count_child_nodes");
 			count_child_nodes(0, result.m_levels, 0, &result.m_data);
@@ -985,7 +986,7 @@ dag::DAG DAGConstructor::impl::build_dag(int count, int depth, const chag::Aabb 
 		{
 			ZoneScopedN("shrink_to_fit");
 			result.m_data.shrink_to_fit();
-			result.m_base_colors.shrink_to_fit();
+			//result.m_base_colors.shrink_to_fit();
 		}
 	}
 	return result;
@@ -1019,7 +1020,7 @@ void copy_to_device(thrust::device_vector<Dev_t> &dev, Dev_t *dev_ptr, const std
 // Base wrapper.
 dag::DAG DAGConstructor::build_dag(
 	const std::vector<uint64_t> &morton_paths,
-	const std::vector<uint32_t> &base_color,
+	//const std::vector<uint32_t> &base_color,
 	int count,
 	int depth,
 	const chag::Aabb &aabb
@@ -1028,17 +1029,17 @@ dag::DAG DAGConstructor::build_dag(
 	ZoneScoped;
 
 	assert(morton_paths.size() == count);
-	assert(base_color.size() == count);
+	//assert(base_color.size() == count);
 	
 	copy_to_device(p_impl_->path,       morton_paths, count);
-	copy_to_device(p_impl_->base_color, base_color,   count);
+	//copy_to_device(p_impl_->base_color, base_color,   count);
 	
 	return p_impl_->build_dag(count, depth, aabb);
 }
 
 dag::DAG DAGConstructor::build_dag(
 	uint64_t *d_pos,
-	uint32_t *d_base_color,
+	//uint32_t *d_base_color,
 	int count,
 	int depth,
 	const chag::Aabb &aabb
@@ -1047,7 +1048,7 @@ dag::DAG DAGConstructor::build_dag(
 	ZoneScoped;
 	
 	copy_to_device(p_impl_->path,       d_pos,        count);
-	copy_to_device(p_impl_->base_color, d_base_color, count);
+	//copy_to_device(p_impl_->base_color, d_base_color, count);
 
 	return p_impl_->build_dag(count, depth, aabb);
 }

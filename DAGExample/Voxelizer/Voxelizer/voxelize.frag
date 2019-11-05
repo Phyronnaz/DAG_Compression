@@ -128,7 +128,7 @@ flat in vec3 fs_gnormal;
 
 layout ( binding = 0 ) uniform atomic_uint frag_count;
 layout(binding = 0, std430) restrict coherent buffer item_buffer_block0{ uint64_t position_ssbo[]; };
-layout(binding = 1, std430) restrict coherent buffer item_buffer_block2{ uint32_t base_color_ssbo[]; };
+//layout(binding = 1, std430) restrict coherent buffer item_buffer_block2{ uint32_t base_color_ssbo[]; };
 
 uniform int grid_dim;
 layout(binding = 0) uniform sampler2D u_BaseColorSampler;
@@ -173,7 +173,7 @@ void main() {
 			position_ssbo[idx] = mortonEncode64(subvoxel_coord2.x, subvoxel_coord2.y, subvoxel_coord2.z);
 			uvec4 color_enc = clamp(uvec4(round(255.0 * base_color)), uvec4(0), uvec4(255));
 			color_enc.a = 255;
-			base_color_ssbo[idx]   = (color_enc.r  << 24) | (color_enc.g  << 16) | (color_enc.b  << 8) | (color_enc.a  << 0);
+			//base_color_ssbo[idx]   = (color_enc.r  << 24) | (color_enc.g  << 16) | (color_enc.b  << 8) | (color_enc.a  << 0);
 		}
 	}
 }

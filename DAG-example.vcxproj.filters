@@ -521,5 +521,6 @@
     <CudaCompile Include="DAGExample\DAGTracer\DAGTracer\DAGTracer.cu" />
     <CudaCompile Include="DAGExample\DAGConstructor\DAGConstructor\DAGConstructor.cu" />
     <CudaCompile Include="DAGExample\ColorCompression\ColorCompression\ours.cu" />
+    <CudaCompile Include="DAGExample\DAGConstructor\DAGConstructor\NewDAGConstructor.h" />
   </ItemGroup>
 </Project>

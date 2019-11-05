@@ -9,50 +9,12 @@
 #include <optional>
 #include <tuple>
 #include "../hash.h"
+#include "tracy/Tracy.hpp"
 
 using namespace std;
 
 
 namespace merger {
-//
-//uint32_t
-//splitBy3_32(uint32_t a)
-//{
-//	uint32_t x = a               & 0x000003ff; // x = ---- ---- ---- ---- ---- --98 7654 3210
-//					 x = (x | (x << 16)) & 0xff0000ff; // x = ---- --98 ---- ---- ---- ---- 7654 3210
-//					 x = (x | (x << 8))  & 0x0300f00f; // x = ---- --98 ---- ---- 7654 ---- ---- 3210
-//					 x = (x | (x << 4))  & 0x030c30c3; // x = ---- --98 ---- 76-- --54 ---- 32-- --10
-//					 x = (x | (x << 2))  & 0x09249249; // x = ---- 9--8 --7- -6-- 5--4 --3- -2-- 1--0
-//	return x;
-//}
-//
-//uint32_t 
-//mortonEncode32(uint32_t x, uint32_t y, uint32_t z)
-//{
-//	uint32_t answer = 0;
-//	answer |= splitBy3_32(x) << 2 | splitBy3_32(y) << 1 | splitBy3_32(z);
-//	return answer;
-//}
-//
-//uint64_t
-//splitBy3_64(uint32_t a) 
-//{
-//	uint64_t x = a             & 0x00000000001ffffful;  // 0000 0000 0000 0000 0000 0000 0000 0000 0000 0000 0001 1111 1111 1111 1111 1111
-//					 x = (x | x << 32) & 0x001f00000000fffful;  // 0000 0000 0001 1111 0000 0000 0000 0000 0000 0000 0000 0000 1111 1111 1111 1111
-//					 x = (x | x << 16) & 0x001f0000ff0000fful;  // 0000 0000 0001 1111 0000 0000 0000 0000 1111 1111 0000 0000 0000 0000 1111 1111
-//					 x = (x | x << 8)  & 0x100f00f00f00f00ful;  // 0001 0000 0000 1111 0000 0000 1111 0000 0000 1111 0000 0000 1111 0000 0000 1111
-//					 x = (x | x << 4)  & 0x10c30c30c30c30c3ul;  // 0001 0000 1100 0011 0000 1100 0011 0000 1100 0011 0000 1100 0011 0000 1100 0011
-//					 x = (x | x << 2)  & 0x1249249249249249ul;  // 0001 0010 0100 1001 0010 0100 1001 0010 0100 1001 0010 0100 1001 0010 0100 1001
-//	return x;
-//}
-//
-//uint64_t
-//mortonEncode64(uint32_t x, uint32_t y, uint32_t z)
-//{
-//	uint64_t answer = 0;
-//	answer |= splitBy3_64(x) << 2 | splitBy3_64(y) << 1 | splitBy3_64(z);
-//	return answer;
-//}
 
 template <typename T>
 unsigned
@@ -65,6 +27,7 @@ template <class InputIt1, class InputIt2, class OutputIt>
 OutputIt 
 index_offset(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt d_first)
 {
+	ZoneScoped;
 	typename std::iterator_traits<InputIt2>::value_type ctr{0};
 	while (first1 != last1)
 	{
@@ -83,6 +46,8 @@ index_offset(InputIt1 first1, InputIt1 last1, InputIt2 first2, OutputIt d_first)
 std::pair<std::vector<uint32_t>, std::vector<uint32_t>>
 get_pointers(const std::vector<std::vector<uint32_t>> &dag, const uint32_t lvl)
 {
+	ZoneScoped;
+	
 	std::pair<std::vector<uint32_t>, std::vector<uint32_t>> result;
 	struct PointerData
 	{
@@ -94,19 +59,26 @@ get_pointers(const std::vector<std::vector<uint32_t>> &dag, const uint32_t lvl)
 	std::vector<PointerData> pointers;
 
 	std::vector<uint32_t> child_offsets;
-	if (lvl + 1 == dag.size()-1)
+	if (lvl + 1 == dag.size() - 1)
 	{
 		child_offsets.resize(dag[lvl + 1].size() / 2);
-		std::iota(child_offsets.begin(), child_offsets.end(), 0);
-		std::transform(
-			child_offsets.begin(),
-			child_offsets.end(),
-			child_offsets.begin(),
-			[](uint32_t v) { return 2 * v; }
-		);
+		{
+			ZoneScopedN("std::iota");
+			std::iota(child_offsets.begin(), child_offsets.end(), 0);
+		}
+		{
+			ZoneScopedN("std::transform");
+			std::transform(
+				child_offsets.begin(),
+				child_offsets.end(),
+				child_offsets.begin(),
+				[](uint32_t v) { return 2 * v; }
+			);
+		}
 	} 
 	else
 	{
+		ZoneScopedN("iterate children");
 		for (int i{0}; i < dag[lvl + 1].size();) 
 		{
 			uint32_t n_children = popcnt_safe(dag[lvl + 1][i] & 0xFF);
@@ -127,14 +99,17 @@ get_pointers(const std::vector<std::vector<uint32_t>> &dag, const uint32_t lvl)
 		}
 		i += n_children + 1;
 	}
-
-	std::sort(
-		begin(pointers),
-		end(pointers),
-		[](const auto &lhs, const auto &rhs) {
-			return lhs.ptr < rhs.ptr;
-		}
-	);
+	
+	{
+		ZoneScopedN("std::sort");
+		std::sort(
+			begin(pointers),
+			end(pointers),
+			[](const auto& lhs, const auto& rhs) {
+				return lhs.ptr < rhs.ptr;
+			}
+		);
+	}
 
 	// TODO(dan): I can make an algorithm out of this.
 	auto first1 = pointers.begin();
@@ -152,43 +127,55 @@ get_pointers(const std::vector<std::vector<uint32_t>> &dag, const uint32_t lvl)
 		if(++first1 == last1){break;}
 		if(first1->ptr != *first2) { ++first2; }
 	}
-
-	std::adjacent_difference(
-		begin(pointers),
-		end(pointers),
-		begin(pointers),
-		[](const auto &lhs, const auto &rhs) -> PointerData {
-			return PointerData{lhs.ptr == rhs.ptr ? 0u : 1u, lhs.index, lhs.offset};
-		}
-	);
+	
+	{
+		ZoneScopedN("std::adjacent_difference");
+		std::adjacent_difference(
+			begin(pointers),
+			end(pointers),
+			begin(pointers),
+			[](const auto& lhs, const auto& rhs) -> PointerData {
+				return PointerData{ lhs.ptr == rhs.ptr ? 0u : 1u, lhs.index, lhs.offset };
+			}
+		);
+	}
 	pointers[0].ptr = 0;
-
-	std::partial_sum(
-		begin(pointers),
-		end(pointers),
-		begin(pointers),
-		[](const auto &sum, const auto &el) -> PointerData {
-			return PointerData{sum.ptr + el.ptr, el.index, el.offset};
-		}
-	);
-
-	std::sort(
-		begin(pointers),
-		end(pointers),
-		[](const auto &lhs, const auto &rhs) {
-			return lhs.index < rhs.index;
-		}
-	);
-
+	
+	{
+		ZoneScopedN("std::partial_sum");
+		std::partial_sum(
+			begin(pointers),
+			end(pointers),
+			begin(pointers),
+			[](const auto& sum, const auto& el) -> PointerData {
+				return PointerData{ sum.ptr + el.ptr, el.index, el.offset };
+			}
+		);
+	}
+	
+	{
+		ZoneScopedN("std::sort");
+		std::sort(
+			begin(pointers),
+			end(pointers),
+			[](const auto& lhs, const auto& rhs) {
+				return lhs.index < rhs.index;
+			}
+		);
+	}
+	
 	for(uint32_t i{0}; i<pointers.size(); ++i)
 	{
 		pointers[i].ptr += pointers[i].offset;
 	}
 
-	result.first.reserve(pointers.size());
-	for(const auto &v:pointers)
 	{
-		result.first.emplace_back(v.ptr);
+		ZoneScopedN("pointers");
+		result.first.reserve(pointers.size());
+		for (const auto& v : pointers)
+		{
+			result.first.emplace_back(v.ptr);
+		}
 	}
 	return result;
 }
@@ -198,6 +185,8 @@ get_pointers(const std::vector<std::vector<uint32_t>> &dag, const uint32_t lvl)
 dag::DAG
 shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 {
+	ZoneScoped;
+	
 	std::vector<std::vector<uint32_t>> merged_dag;
 	std::vector<std::vector<uint64_t>> merged_hashes;
 	std::vector<uint64_t> merged_enclosed_leaves;
@@ -244,13 +233,16 @@ shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 		std::vector<uint64_t> combined_hashes;
 
 		// Combine hashes, discard identical.
-		std::set_union(
-			lhs_hashes.begin(),
-			lhs_hashes.end(),
-			rhs_hashes.begin(),
-			rhs_hashes.end(),
-			back_inserter(combined_hashes)
-		);
+		{
+			ZoneScopedN("std::set_union");
+			std::set_union(
+				lhs_hashes.begin(),
+				lhs_hashes.end(),
+				rhs_hashes.begin(),
+				rhs_hashes.end(),
+				back_inserter(combined_hashes)
+			);
+		}
 
 		// Figure out new placement of child nodes in the DAGs,
 		// as well the parent child mask.
@@ -320,11 +312,14 @@ shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 		
 		node_start.resize(node_start_new.size());
 		node_start[0] = 0;
-		std::partial_sum(
-			node_start_new.begin(),
-			prev(node_start_new.end()),
-			next(node_start.begin())
-		);
+		{
+			ZoneScopedN("std::partial_sum");
+			std::partial_sum(
+				node_start_new.begin(),
+				prev(node_start_new.end()),
+				next(node_start.begin())
+			);
+		}
 		node_start_new.clear();
 
 		// Compute offsets for next level
@@ -345,10 +340,13 @@ shallow_merge(const dag::DAG &lhs, const dag::DAG &rhs)
 		merged_dag.emplace_back(std::move(new_level));
 		merged_hashes.emplace_back(std::move(combined_hashes));
 	}
-
-	std::reverse(merged_dag.begin(), merged_dag.end());
-	std::reverse(merged_hashes.begin(), merged_hashes.end());
-
+	
+	{
+		ZoneScopedN("std::reverse");
+		std::reverse(merged_dag.begin(), merged_dag.end());
+		std::reverse(merged_hashes.begin(), merged_hashes.end());
+	}
+	
 	dag::DAG result = lhs;
 	result.m_data = merged_dag;
 	result.m_hashes = merged_hashes;
@@ -360,6 +358,7 @@ inline
 std::optional<uint32_t>
 find_offset(const dag::DAG &dag, uint32_t lvl, uint64_t hash)
 {
+	ZoneScoped;
 	auto hash_begin = dag.m_hashes[lvl].begin();
 	auto hash_end   = dag.m_hashes[lvl].end();
 	auto found      = std::find(hash_begin, hash_end, hash);
@@ -380,6 +379,8 @@ find_offset(const dag::DAG &dag, uint32_t lvl, uint64_t hash)
 std::optional<dag::DAG>
 merge(const std::array<std::optional<dag::DAG>, 8> &batch)
 {
+	ZoneScoped;
+	
 	std::optional<dag::DAG> dag;
 	std::vector<const dag::DAG*> dags;
 	struct NodeInfo
@@ -390,24 +391,28 @@ merge(const std::array<std::optional<dag::DAG>, 8> &batch)
 		uint32_t node_offset;
 	};
 	std::vector<NodeInfo> node_info;
-	uint32_t mask{0}, ctr{0}, ctr2{0};
-	uint64_t enclosed{0};
-	for(auto & v:batch)
+	uint32_t mask{ 0 };
+	uint64_t enclosed{ 0 };
 	{
-		if(v)
+		ZoneScopedN("creating node infos");
+		uint32_t ctr{ 0 }, ctr2{ 0 };
+		for (auto& v : batch)
 		{
-			mask |= 1u << ctr;
-			uint32_t enclosed_mask = v->m_data[0][0] >> 8;
-			enclosed += v->m_enclosed_leaves.empty() ? enclosed_mask : v->m_enclosed_leaves[enclosed_mask];
-			dags.push_back(&v.value());
-			node_info.emplace_back(NodeInfo{
-				v->m_hashes[0][0],
-				popcnt_safe(v->m_data[0][0] & 0xFF) + 1,
-				ctr2++,
-				0}
-			);
+			if (v)
+			{
+				mask |= 1u << ctr;
+				uint32_t enclosed_mask = v->m_data[0][0] >> 8;
+				enclosed += v->m_enclosed_leaves.empty() ? enclosed_mask : v->m_enclosed_leaves[enclosed_mask];
+				dags.push_back(&v.value());
+				node_info.emplace_back(NodeInfo{
+					v->m_hashes[0][0],
+					popcnt_safe(v->m_data[0][0] & 0xFF) + 1,
+					ctr2++,
+					0 }
+				);
+			}
+			++ctr;
 		}
-		++ctr;
 	}
 	std::size_t n_dags{dags.size()};
 	if(n_dags > 0) 
@@ -422,38 +427,52 @@ merge(const std::array<std::optional<dag::DAG>, 8> &batch)
 
 		// Construct upper leves, similar to
 		// the DAG construction on the gpu.
-		const std::size_t required_size =
-			std::accumulate(
+#if 0
+		std::size_t required_size;
+		{
+			ZoneScopedN("std::accumulate");
+			required_size = std::accumulate(
 				dags.begin(),
 				dags.end(),
 				std::size_t(0),
-				[](std::size_t acc, const dag::DAG *dag) { return acc + dag->m_base_colors.size(); }
+				[](std::size_t acc, const dag::DAG* dag) { return acc + dag->m_base_colors.size(); }
 			);
-
-		dag->m_base_colors.reserve(required_size);
-
+		}
+		{
+			ZoneScopedN("reserve");
+			dag->m_base_colors.reserve(required_size);
+		}
 		for (int i{1}; i < n_dags; ++i)
 		{
 			auto insert_data = [](std::vector<uint32_t> &dst, const std::vector<uint32_t> &src) {
+				ZoneScopedN("insert");
 				dst.insert( dst.end(), src.begin(), src.end() );
 			};
 			insert_data(dag->m_base_colors, dags[i]->m_base_colors);
 		}
+#endif
 
-		std::reverse(dag->m_data.begin(),   dag->m_data.end());
-		std::reverse(dag->m_hashes.begin(), dag->m_hashes.end());
+		{
+			ZoneScopedN("std::reverse");
+			std::reverse(dag->m_data.begin(), dag->m_data.end());
+			std::reverse(dag->m_hashes.begin(), dag->m_hashes.end());
+		}
+		
 		std::vector<uint32_t> root;
 		dag->m_levels++;
 		dag->m_top_levels++;
 		dag->m_enclosed_leaves.push_back(enclosed);
 		root.push_back(mask | (uint32_t(dag->m_enclosed_leaves.size() -1) << 8));
-		std::sort(
-			node_info.begin(),
-			node_info.end(),
-			[](const NodeInfo &lhs, const NodeInfo &rhs) {
-				return lhs.hash < rhs.hash;
-			}
-		);
+		{
+			ZoneScopedN("std::sort");
+			std::sort(
+				node_info.begin(),
+				node_info.end(),
+				[](const NodeInfo& lhs, const NodeInfo& rhs) {
+					return lhs.hash < rhs.hash;
+				}
+			);
+		}
 		node_info[0].node_offset = 0;
 		
 		for(int i{1}; i<node_info.size(); ++i)
@@ -461,28 +480,37 @@ merge(const std::array<std::optional<dag::DAG>, 8> &batch)
 			bool skip = node_info[i].hash == node_info[i-1].hash;
 			node_info[i].node_offset = node_info[i-1].node_offset + (skip ? 0 : node_info[i-1].node_size);
 		}
-
-		std::sort(
-			node_info.begin(),
-			node_info.end(),
-			[](const NodeInfo &lhs, const NodeInfo &rhs) {
-				return lhs.node_index < rhs.node_index;
-			}
-		);
+		
+		{
+			ZoneScopedN("std::sort");
+			std::sort(
+				node_info.begin(),
+				node_info.end(),
+				[](const NodeInfo& lhs, const NodeInfo& rhs) {
+					return lhs.node_index < rhs.node_index;
+				}
+			);
+		}
 
 		uint64_t hash_key[9] = {0, 0, 0, 0, 0, 0, 0, 0, 0};
 		int ctr{0};
 		uint64_t hash_value[2];
-		for(const NodeInfo &v : node_info)
 		{
-			root.push_back(v.node_offset);
-			hash_key[ctr++] = v.hash;
+			ZoneScopedN("iterate node infos");
+			for (const NodeInfo& v : node_info)
+			{
+				root.push_back(v.node_offset);
+				hash_key[ctr++] = v.hash;
+			}
 		}
 		MurmurHash3_x64_128(&hash_key[0], 9 * sizeof(uint64_t), 0x0, hash_value);
 		dag->m_hashes.push_back(std::vector<uint64_t>{hash_value[0]});
 		dag->m_data.push_back(root);
-		std::reverse(dag->m_data.begin(),   dag->m_data.end());
-		std::reverse(dag->m_hashes.begin(), dag->m_hashes.end());
+		{
+			ZoneScopedN("std::reverse");
+			std::reverse(dag->m_data.begin(), dag->m_data.end());
+			std::reverse(dag->m_hashes.begin(), dag->m_hashes.end());
+		}
 	}
 	return dag;
 }

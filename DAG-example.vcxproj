@@ -413,6 +413,7 @@
     <CudaCompile Include="DAGExample\DAGConstructor\DAGConstructor\DAGConstructor.cu">
       <FileType>Document</FileType>
     </CudaCompile>
+    <CudaCompile Include="DAGExample\DAGConstructor\DAGConstructor\NewDAGConstructor.h" />
     <CudaCompile Include="DAGExample\DAGTracer\DAGTracer\DAGTracer.cu">
       <FileType>Document</FileType>
     </CudaCompile>

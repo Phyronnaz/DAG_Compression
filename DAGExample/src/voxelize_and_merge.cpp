@@ -122,8 +122,8 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 
 	// Map the resources on the GPU
 	cudaGraphicsResource *cuda_position_resource;
-	cudaGraphicsResource *cuda_base_color_resource;
-	uint32_t *d_base_color{nullptr};
+	//cudaGraphicsResource *cuda_base_color_resource;
+	//uint32_t *d_base_color{nullptr};
 	uint64_t *d_positions{nullptr};
 
 	auto map_and_register = [](GLuint ssbo, cudaGraphicsResource *&resource, auto *&dev_ptr){
@@ -134,14 +134,14 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 	};
 
 	map_and_register( voxel_generator.m_position_ssbo,   cuda_position_resource,   d_positions );
-	map_and_register( voxel_generator.m_base_color_ssbo, cuda_base_color_resource, d_base_color);
+	//map_and_register( voxel_generator.m_base_color_ssbo, cuda_base_color_resource, d_base_color);
 
 	// The DAGConstructor will call a function, here frag_fn, which will return a struct with the raw data
 	// used for construction. The raw data in this case, we get from calling the generate_fragments function
 	// of the voxelizer, which will write to the previously mapped resources.
 	struct RawData {
 		uint64_t *positions;
-		uint32_t *base_color;
+		//uint32_t *base_color;
 		uint32_t count;
 	};
 	auto frag_fn = [&](const chag::Aabb &aabb, int resolution) {
@@ -149,7 +149,7 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 		auto count = voxel_generator.generate_fragments(draw_fn, aabb, resolution);
 		return RawData{
 			d_positions,
-			d_base_color,
+			//d_base_color,
 			count
 		};
 	};
@@ -189,7 +189,7 @@ std::optional<dag::DAG> DAG_from_scene(const int dag_resolution, const std::stri
 		);
 
 
-	cudaGraphicsUnmapResources(1, &cuda_base_color_resource);
+	//cudaGraphicsUnmapResources(1, &cuda_base_color_resource);
 	cudaGraphicsUnmapResources(1, &cuda_position_resource);
 
 	glTFLoader::free_scene(scene);

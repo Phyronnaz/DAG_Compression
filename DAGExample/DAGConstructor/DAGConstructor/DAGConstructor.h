@@ -8,6 +8,8 @@
 #include <chrono>
 #include "tracy/Tracy.hpp"
 
+#include <cuda_profiler_api.h>
+
 #ifndef __CUDACC__
 #include "Merger.h"
 #endif
@@ -31,7 +33,7 @@ class DAGConstructor {
 
 	dag::DAG build_dag(
 		uint64_t *d_pos,
-		uint32_t *d_base_color,
+		//uint32_t *d_base_color,
 		int count,
 		int depth,
 		const chag::Aabb &aabb
@@ -39,7 +41,7 @@ class DAGConstructor {
 
 	dag::DAG build_dag(	
 		const std::vector<uint64_t> &morton_paths,
-		const std::vector<uint32_t> &base_color,
+		//const std::vector<uint32_t> &base_color,
 		int count,
 		int depth,
 		const chag::Aabb &aabb
@@ -77,6 +79,7 @@ class DAGConstructor {
             std::cout << minutes << ":" << seconds << " ";
         };
 
+		uint64_t total_count = 0;
         for (int i{ 0 }; i < aabb_list.size(); ++i)
         {
             if (i % 100 == 0)
@@ -92,17 +95,24 @@ class DAGConstructor {
 			auto &aabb  = aabb_list[i];
 			auto voxels = fn(aabb, std::min(max_subdag_resolution, geometry_resolution));
 			if (voxels.count > 0) {
+				total_count += voxels.count;
 				dags[i] =
 					build_dag(
 						voxels.positions,
-						voxels.base_color,
+						//voxels.base_color,
 						voxels.count,
 						LevelsExcluding64BitLeafs,
 						aabb);
 			}
 		}
 		std::cout << "done.\n";
+		std::cout << "Total voxels: " << total_count << "\n";
 
+#if 0
+		cudaProfilerStop();
+		exit(0);
+#endif
+		
 		// The way the sub volumes are split, is in a morton order.
 		// 8 consecutive volumes hence compose a larger super volume.
 		// We thus create a batch of 8 subvolumes and merge them,

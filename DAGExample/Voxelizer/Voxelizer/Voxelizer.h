@@ -15,14 +15,14 @@ class Voxelizer {
 	GLuint m_frag_ctr_buffer;
 	GLuint m_dummy_fbo;
 	GLuint tex;
-	int m_tex_dim = 64 * 1024 * 1024;
+	int m_tex_dim = 128 * 1024 * 1024;
 	int m_grid_size;
 	GLuint voxelize_shader{0};
 
  public:
 	GLuint m_position_ssbo;
 	GLuint m_mask_ssbo;
-	GLuint m_base_color_ssbo;
+	//GLuint m_base_color_ssbo;
 	GLuint m_frag_count;
 	GLuint m_num_colors;
 	chag::Aabb m_aabb;
@@ -105,7 +105,7 @@ class Voxelizer {
 
 			glBindBufferBase(GL_ATOMIC_COUNTER_BUFFER, 0, m_frag_ctr_buffer);
 			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 0, m_position_ssbo);
-			glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_base_color_ssbo);
+			//glBindBufferBase(GL_SHADER_STORAGE_BUFFER, 1, m_base_color_ssbo);
 
 			glBindFramebuffer(GL_FRAMEBUFFER, m_dummy_fbo);
 			{
@@ -131,6 +131,8 @@ class Voxelizer {
 			glBindBuffer(GL_ATOMIC_COUNTER_BUFFER, 0);
 		}
 		glUseProgram(0);
+
+		assert(m_frag_count < m_tex_dim);
 		return m_frag_count;
 	}
 	explicit Voxelizer(int grid_size);
