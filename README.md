@@ -1,4 +1,7 @@
 # DAG-example
+
+Fork of https://github.com/gegoggigog/DAG-example/tree/compression to work with https://github.com/Phyronnaz/HashDAG
+
 WIP!
 
 Currently it only supports building DAGs up to a resolution of 1024.
